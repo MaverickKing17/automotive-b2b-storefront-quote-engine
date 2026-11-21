@@ -1,0 +1,6 @@
+{
+  "name": "Astrateq Gadgets — Fleet Hardware & Quote Engine",
+  "description": "Automotive Digital Showroom & B2B Fleet Quote Engine with vehicle fitment verification, tiered CAD pricing, and Spec Assist.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
