@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Send, TerminalSquare } from 'lucide-react';
-import type { StorefrontTheme } from '../data/storefronts';
+import type { StorefrontConfig } from '../data/storefronts';
 import { answerSpecAssistQuestion, type SpecAssistAnswer } from '../utils/specAssistEngine';
 
 interface Exchange {
@@ -9,29 +9,35 @@ interface Exchange {
   response: SpecAssistAnswer;
 }
 
-const SAMPLE_PROMPTS = [
-  'Which dashcams support 24V Class 8 trucks?',
-  'Is AST-104 verified for 2025 Rivian EDV 700 Commercial EV?',
-  'Does AST-208 fit a Toyota Hiace?',
-  'What EV charger controllers and harnesses are in the catalog?',
-];
-
-export const SpecAssistSection: React.FC<{ theme: StorefrontTheme }> = ({ theme }) => {
+export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ storefront }) => {
+  const { theme, specAssistPrompts, specAssistPlaceholder } = storefront;
   const [input, setInput] = useState('');
-  const [history, setHistory] = useState<Exchange[]>([
+  const [history, setHistory] = useState<Exchange[]>(() => [
     {
-      id: 'init-1',
-      question: 'Which dashcams support 24V Class 8 trucks?',
-      response: answerSpecAssistQuestion('Which dashcams support 24V Class 8 trucks?'),
+      id: `init-${storefront.id}`,
+      question: specAssistPrompts[0],
+      response: answerSpecAssistQuestion(specAssistPrompts[0], storefront.id),
     },
   ]);
+
+  useEffect(() => {
+    const initialPrompt = storefront.specAssistPrompts[0];
+    setInput('');
+    setHistory([
+      {
+        id: `init-${storefront.id}`,
+        question: initialPrompt,
+        response: answerSpecAssistQuestion(initialPrompt, storefront.id),
+      },
+    ]);
+  }, [storefront.id, storefront.specAssistPrompts]);
 
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
 
   const submitQuestion = (rawQuery: string) => {
     const trimmed = rawQuery.trim();
     if (!trimmed) return;
-    const response = answerSpecAssistQuestion(trimmed);
+    const response = answerSpecAssistQuestion(trimmed, storefront.id);
     setHistory((prev) => [
       ...prev,
       {
@@ -76,9 +82,9 @@ export const SpecAssistSection: React.FC<{ theme: StorefrontTheme }> = ({ theme 
               style={{ color: theme.textSecondary }}
               className="mt-3 text-sm leading-relaxed"
             >
-              Ask specification, CAD tier, or vehicle-fitment questions. Answers are generated
-              strictly from published catalogue data and the vehicle compatibility matrix—unlisted
-              vehicles are escalated for technical fitment review.
+              Ask specification, CAD tier, or vehicle-fitment questions for{' '}
+              {storefront.brandName}. Answers are generated strictly from published demonstration
+              catalogue data and the vehicle compatibility matrix.
             </p>
 
             <div className="mt-6">
@@ -89,7 +95,7 @@ export const SpecAssistSection: React.FC<{ theme: StorefrontTheme }> = ({ theme 
                 Example queries
               </div>
               <div className="flex flex-col gap-2">
-                {SAMPLE_PROMPTS.map((prompt) => (
+                {specAssistPrompts.map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
@@ -127,7 +133,7 @@ export const SpecAssistSection: React.FC<{ theme: StorefrontTheme }> = ({ theme 
                 className="inline-flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider font-semibold"
               >
                 <TerminalSquare className="w-4 h-4" aria-hidden="true" />
-                <span>Spec Assist · Published Catalog Engine</span>
+                <span>Spec Assist · {storefront.brandTitleMain} Catalog Engine</span>
               </span>
               <span style={{ color: theme.textMuted }} className="text-[11px] font-mono-tech">
                 Rule-based · Cited SKUs
@@ -180,7 +186,7 @@ export const SpecAssistSection: React.FC<{ theme: StorefrontTheme }> = ({ theme 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about 24V dashcams, J1939 gateways, or vehicle fitment..."
+                placeholder={specAssistPlaceholder}
                 style={{
                   backgroundColor: theme.bgInput,
                   borderColor: theme.borderStrong,

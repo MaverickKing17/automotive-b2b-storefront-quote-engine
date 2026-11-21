@@ -9,7 +9,6 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react';
-import { clientConfig } from '../data/clientConfig';
 import type { StorefrontConfig, TrustPillar } from '../data/storefronts';
 
 interface CategoryShowcaseProps {
@@ -32,23 +31,41 @@ const PillarIcon: React.FC<{ icon: TrustPillar['icon']; color: string }> = ({
 export const TrustPillarsStrip: React.FC<{
   storefront: StorefrontConfig;
   overlapping?: boolean;
-}> = ({ storefront }) => {
+}> = ({ storefront, overlapping = false }) => {
   const { theme, trustPillars } = storefront;
-  const iconColor = theme.accentInfo;
+  const iconColor =
+    storefront.id === 'astrateq'
+      ? theme.accentInfo
+      : theme.accentPrimary;
+
+  const stripBg =
+    storefront.id === 'astrateq'
+      ? '#0D1420'
+      : theme.bgSurface;
+  const stripBorder =
+    storefront.id === 'astrateq'
+      ? '#1C2A3E'
+      : theme.border;
 
   return (
-    <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pt-5 pb-3">
+    <div
+      className={
+        overlapping
+          ? 'relative z-10 -mt-8 mx-auto max-w-[1360px] px-4 sm:px-6'
+          : 'mx-auto max-w-[1360px] px-4 sm:px-6 pt-5 pb-3'
+      }
+    >
       <div
         style={{
-          backgroundColor: '#0D1420',
-          borderColor: '#1C2A3E',
+          backgroundColor: stripBg,
+          borderColor: stripBorder,
         }}
         className="grid grid-cols-1 md:grid-cols-3 rounded-xl border divide-y md:divide-y-0 md:divide-x shadow-lg"
       >
         {trustPillars.map((pillar) => (
           <div
             key={pillar.title}
-            style={{ borderColor: '#1C2A3E' }}
+            style={{ borderColor: stripBorder }}
             className="flex items-center md:justify-center gap-3.5 px-6 py-4"
           >
             <div
@@ -75,7 +92,10 @@ export const TrustPillarsStrip: React.FC<{
   );
 };
 
-export const NeedAdviceCard: React.FC<{ storefront: StorefrontConfig }> = ({ storefront }) => {
+export const NeedAdviceCard: React.FC<{
+  storefront: StorefrontConfig;
+  onOpenDrawer: () => void;
+}> = ({ storefront, onOpenDrawer }) => {
   const { theme } = storefront;
   const accent = theme.accentPrimary;
 
@@ -99,24 +119,35 @@ export const NeedAdviceCard: React.FC<{ storefront: StorefrontConfig }> = ({ sto
         </div>
         <div>
           <h3 style={{ color: theme.textPrimary }} className="font-display text-base font-bold">
-            Need Spec Guidance?
+            Need Expert Advice?
           </h3>
           <p style={{ color: theme.textSecondary }} className="text-xs mt-1 leading-relaxed">
-            Query published hardware ratings, CAD pricing tiers, and matrix compatibility via
-            inline Spec Assist.
+            Our EV charging team is here to help with depot load sizing, OCPP telemetry, and RFQ
+            planning.
           </p>
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t" style={{ borderColor: theme.border }}>
+      <div
+        className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2"
+        style={{ borderColor: theme.border }}
+      >
         <a
           href="#spec-assist"
           style={{ color: accent }}
           className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline underline-offset-4"
         >
-          <span>Open Spec Assist</span>
+          <span>Ask Spec Assist</span>
           <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
         </a>
+        <button
+          type="button"
+          onClick={onOpenDrawer}
+          style={{ color: theme.textPrimary }}
+          className="text-xs font-medium hover:underline underline-offset-4 cursor-pointer"
+        >
+          Contact Us →
+        </button>
       </div>
     </div>
   );
@@ -126,7 +157,12 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
   storefront,
   onSelectCategory,
 }) => {
-  const { theme } = storefront;
+  const { theme, categoryCards } = storefront;
+  const isFiveCards = categoryCards.length >= 5;
+  const linkAccent =
+    theme.isLight || storefront.id === 'voltdepot' || storefront.id === 'truenorth'
+      ? theme.accentPrimary
+      : theme.accentInfo;
 
   const handlePick = (category: string) => {
     onSelectCategory(category);
@@ -158,43 +194,94 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
           <button
             type="button"
             onClick={() => handlePick('All Hardware')}
-            style={{ color: theme.accentInfo }}
+            style={{ color: linkAccent }}
             className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline underline-offset-4 cursor-pointer whitespace-nowrap"
           >
-            <span>View All Categories</span>
+            <span>{storefront.categoryViewAllLabel}</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {clientConfig.categoryShowcase.map((item) => (
-            <button
-              key={item.title}
-              type="button"
-              onClick={() => handlePick(item.category)}
-              style={{ borderColor: '#1E2B3D' }}
-              className="group relative aspect-[16/11] w-full overflow-hidden rounded-xl border bg-[#0E1522] text-left transition-colors hover:border-[#22D3EE]/50 cursor-pointer"
-            >
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#070B12] via-[#070B12]/45 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-3.5 flex items-end justify-between gap-2">
-                <div>
-                  <div className="font-display text-xs sm:text-[13px] font-bold text-[#F3F6FA] leading-snug">
-                    {item.title}
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 ${
+            isFiveCards ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+          } gap-4`}
+        >
+          {categoryCards.map((item) => {
+            if (storefront.categoryCardStyle === 'light-framed') {
+              return (
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => handlePick(item.category)}
+                  style={{
+                    backgroundColor: theme.bgSurface,
+                    borderColor: theme.border,
+                  }}
+                  className="group overflow-hidden rounded-xl border text-left hover:shadow-md transition-all cursor-pointer flex flex-col"
+                >
+                  <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                    />
                   </div>
-                </div>
-                <ChevronRight
-                  className="w-4 h-4 text-[#9FB0C4] group-hover:text-[#22D3EE] transition-colors shrink-0"
-                  aria-hidden="true"
+                  <div className="p-4 flex items-center justify-between gap-2 w-full">
+                    <div>
+                      <div
+                        style={{ color: theme.textPrimary }}
+                        className="font-display text-sm font-bold leading-tight"
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        style={{ color: theme.textSecondary }}
+                        className="text-xs mt-0.5 line-clamp-1"
+                      >
+                        {item.subtitle}
+                      </div>
+                    </div>
+                    <ChevronRight
+                      style={{ color: theme.accentPrimary }}
+                      className="w-4 h-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                  </div>
+                </button>
+              );
+            }
+
+            return (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => handlePick(item.category)}
+                style={{ borderColor: storefront.id === 'astrateq' ? '#1E2B3D' : theme.border }}
+                className="group relative aspect-[16/11] w-full overflow-hidden rounded-xl border bg-[#0E1522] text-left transition-colors cursor-pointer"
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
                 />
-              </div>
-            </button>
-          ))}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#070B12] via-[#070B12]/45 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-3.5 flex items-end justify-between gap-2">
+                  <div>
+                    <div className="font-display text-xs sm:text-[13px] font-bold text-[#F3F6FA] leading-snug">
+                      {item.title}
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className="w-4 h-4 text-[#9FB0C4] transition-colors shrink-0"
+                    aria-hidden="true"
+                  />
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>

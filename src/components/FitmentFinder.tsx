@@ -11,14 +11,19 @@ import {
   clientConfig,
   evaluateVehicleFitment,
   formatCad,
-  getProductBySku,
   getTier1Price,
 } from '../data/clientConfig';
-import type { StorefrontTheme } from '../data/storefronts';
+import {
+  getProductBySkuAcrossAll,
+  type StorefrontId,
+  type StorefrontTheme,
+} from '../data/storefronts';
 import type { FitmentEvaluation, VehicleSelection } from '../types/quote';
 
 interface FitmentFinderProps {
   theme: StorefrontTheme;
+  storefrontId?: StorefrontId;
+  recommendedAddonSku?: string;
   layout?: 'docked-vertical' | 'horizontal-bar';
   onAttachVehicle: (vehicle: VehicleSelection) => void;
   onAddProduct: (sku: string) => void;
@@ -27,6 +32,9 @@ interface FitmentFinderProps {
 
 export const FitmentFinder: React.FC<FitmentFinderProps> = ({
   theme,
+  storefrontId = 'astrateq',
+  recommendedAddonSku,
+  layout = 'docked-vertical',
   onAttachVehicle,
   onAddProduct,
   attachedGroupCount,
@@ -44,6 +52,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
     : clientConfig.fitmentOptions.allModelsFallback;
 
   const allFourChosen = Boolean(year && make && model && vehicleClass);
+  const isHorizontal = layout === 'horizontal-bar';
 
   const handleYearChange = (nextYear: string) => {
     setYear(nextYear);
@@ -92,186 +101,327 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
     setAttachedNotice(`${year} ${make} ${model} (${vehicleClass}) attached as a vehicle group.`);
   };
 
-  const recommendedHarness = result?.recommendedHarnessSku
-    ? getProductBySku(result.recommendedHarnessSku)
-    : undefined;
+  const targetAddonSku = recommendedAddonSku ?? result?.recommendedHarnessSku;
+  const recommendedHarness =
+    result && targetAddonSku ? getProductBySkuAcrossAll(targetAddonSku, storefrontId) : undefined;
 
-  const selectStyle: React.CSSProperties = {
-    backgroundColor: '#0E1726',
-    borderColor: '#233248',
-    color: theme.textPrimary,
-  };
-
-  const checkBtnStyle: React.CSSProperties = allFourChosen
+  const selectStyle: React.CSSProperties = isHorizontal
     ? {
-        backgroundColor: '#FACC15',
-        color: '#090E16',
-        borderColor: '#FACC15',
+        backgroundColor: theme.bgInput,
+        borderColor: theme.borderStrong,
+        color: theme.textPrimary,
       }
     : {
-        backgroundColor: 'rgba(250, 204, 21, 0.25)',
-        color: '#CBD5E1',
-        borderColor: 'rgba(250, 204, 21, 0.35)',
+        backgroundColor: '#0E1726',
+        borderColor: '#25354B',
+        color: theme.textPrimary,
       };
+
+  const checkBtnStyle: React.CSSProperties = isHorizontal
+    ? allFourChosen
+      ? {
+          backgroundColor: theme.ctaBg,
+          color: theme.ctaText,
+          borderColor: theme.ctaBg,
+        }
+      : {
+          backgroundColor: theme.bgElevated,
+          color: theme.textMuted,
+          borderColor: theme.border,
+        }
+    : allFourChosen
+      ? {
+          backgroundColor: '#FACC15',
+          color: '#090E16',
+          borderColor: '#FACC15',
+        }
+      : {
+          backgroundColor: 'rgba(250, 204, 21, 0.35)',
+          color: '#E2E8F0',
+          borderColor: 'rgba(250, 204, 21, 0.45)',
+        };
 
   return (
     <div id="fitment" className="scroll-mt-20">
       <div
-        style={{
-          backgroundColor: 'rgba(11, 18, 29, 0.90)',
-          borderColor: '#1E2E44',
-        }}
-        className="rounded-xl border backdrop-blur-md shadow-2xl p-5"
+        style={
+          isHorizontal
+            ? {
+                backgroundColor: theme.bgSurface,
+                borderColor: theme.border,
+              }
+            : {
+                backgroundColor: 'rgba(11, 18, 29, 0.90)',
+                borderColor: '#1F3147',
+              }
+        }
+        className={`rounded-xl border ${
+          isHorizontal ? 'p-5 shadow-sm' : 'backdrop-blur-md shadow-2xl p-4'
+        }`}
       >
         {/* Header */}
         <div
-          style={{ borderColor: '#1B283C' }}
-          className="flex items-center justify-between gap-3 border-b pb-3.5 mb-4"
+          style={{ borderColor: isHorizontal ? theme.border : '#1B283C' }}
+          className="flex items-center justify-between gap-2.5 border-b pb-3 mb-3"
         >
           <div className="flex items-center gap-2.5">
             <div
               style={{
-                borderColor: `${theme.accentInfo}55`,
-                backgroundColor: `${theme.accentInfo}1A`,
+                borderColor: `${theme.isLight ? theme.accentPrimary : theme.accentInfo}55`,
+                backgroundColor: `${theme.isLight ? theme.accentPrimary : theme.accentInfo}1A`,
               }}
-              className="w-8 h-8 rounded-lg border flex items-center justify-center shrink-0"
+              className="w-7 h-7 rounded-md border flex items-center justify-center shrink-0"
             >
-              <Car style={{ color: theme.accentInfo }} className="w-4 h-4" aria-hidden="true" />
+              <Car
+                style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                className="w-4 h-4"
+                aria-hidden="true"
+              />
             </div>
-            <div>
-              <h2
-                style={{ color: theme.textPrimary }}
-                className="font-display text-sm sm:text-[15px] font-bold leading-tight"
-              >
-                Vehicle Fitment Finder
-              </h2>
-            </div>
+            <h2
+              style={{ color: theme.textPrimary }}
+              className="font-display text-sm font-bold leading-tight"
+            >
+              Vehicle Fitment Finder
+            </h2>
           </div>
-          <span
-            style={{ color: theme.accentInfo }}
-            className="text-[10px] font-mono-tech uppercase tracking-wider"
-          >
-            01 · Fitment
-          </span>
+          {isHorizontal && (
+            <span style={{ color: theme.textMuted }} className="text-[11px] font-mono-tech">
+              {clientConfig.brand.demoNote}
+            </span>
+          )}
         </div>
 
-        {/* Form: Compact Horizontal Label-Left / Select-Right Rows Matching Panel 1 */}
-        <form onSubmit={handleCheckCompatibility} className="space-y-2.5">
-          <div className="grid grid-cols-[54px_1fr] items-center gap-3">
-            <label
-              htmlFor="fitment-year"
-              style={{ color: theme.textSecondary }}
-              className="text-xs font-medium"
-            >
-              Year
-            </label>
-            <select
-              id="fitment-year"
-              value={year}
-              onChange={(e) => handleYearChange(e.target.value)}
-              style={selectStyle}
-              className="w-full h-9 rounded-md border px-3 text-xs focus:outline-none focus:border-[#22D3EE]"
-            >
-              <option value="">Select year</option>
-              {clientConfig.fitmentOptions.years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Form */}
+        {isHorizontal ? (
+          <form
+            onSubmit={handleCheckCompatibility}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end"
+          >
+            <div>
+              <label
+                htmlFor="fitment-year"
+                style={{ color: theme.textSecondary }}
+                className="block text-[11px] font-mono-tech uppercase mb-1"
+              >
+                Year
+              </label>
+              <select
+                id="fitment-year"
+                value={year}
+                onChange={(e) => handleYearChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+              >
+                <option value="">Select Year</option>
+                {clientConfig.fitmentOptions.years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="grid grid-cols-[54px_1fr] items-center gap-3">
-            <label
-              htmlFor="fitment-make"
-              style={{ color: theme.textSecondary }}
-              className="text-xs font-medium"
-            >
-              Make
-            </label>
-            <select
-              id="fitment-make"
-              value={make}
-              onChange={(e) => handleMakeChange(e.target.value)}
-              style={selectStyle}
-              className="w-full h-9 rounded-md border px-3 text-xs focus:outline-none focus:border-[#22D3EE]"
-            >
-              <option value="">Select Make</option>
-              {clientConfig.fitmentOptions.makes.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label
+                htmlFor="fitment-make"
+                style={{ color: theme.textSecondary }}
+                className="block text-[11px] font-mono-tech uppercase mb-1"
+              >
+                Make
+              </label>
+              <select
+                id="fitment-make"
+                value={make}
+                onChange={(e) => handleMakeChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+              >
+                <option value="">Select Make</option>
+                {clientConfig.fitmentOptions.makes.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="grid grid-cols-[54px_1fr] items-center gap-3">
-            <label
-              htmlFor="fitment-model"
-              style={{ color: theme.textSecondary }}
-              className="text-xs font-medium"
-            >
-              Model
-            </label>
-            <select
-              id="fitment-model"
-              value={model}
-              onChange={(e) => handleModelChange(e.target.value)}
-              style={selectStyle}
-              className="w-full h-9 rounded-md border px-3 text-xs focus:outline-none focus:border-[#22D3EE]"
-            >
-              <option value="">Select Model</option>
-              {availableModels.map((mod) => (
-                <option key={mod} value={mod}>
-                  {mod}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label
+                htmlFor="fitment-model"
+                style={{ color: theme.textSecondary }}
+                className="block text-[11px] font-mono-tech uppercase mb-1"
+              >
+                Model
+              </label>
+              <select
+                id="fitment-model"
+                value={model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+              >
+                <option value="">Select Model</option>
+                {availableModels.map((mod) => (
+                  <option key={mod} value={mod}>
+                    {mod}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="grid grid-cols-[54px_1fr] items-center gap-3">
-            <label
-              htmlFor="fitment-class"
-              style={{ color: theme.textSecondary }}
-              className="text-xs font-medium"
-            >
-              Class
-            </label>
-            <select
-              id="fitment-class"
-              value={vehicleClass}
-              onChange={(e) => handleClassChange(e.target.value)}
-              style={selectStyle}
-              className="w-full h-9 rounded-md border px-3 text-xs focus:outline-none focus:border-[#22D3EE]"
-            >
-              <option value="">Select Class</option>
-              {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
-                <option key={vc} value={vc}>
-                  {vc}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label
+                htmlFor="fitment-class"
+                style={{ color: theme.textSecondary }}
+                className="block text-[11px] font-mono-tech uppercase mb-1"
+              >
+                Class
+              </label>
+              <select
+                id="fitment-class"
+                value={vehicleClass}
+                onChange={(e) => handleClassChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+              >
+                <option value="">Select Class</option>
+                {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
+                  <option key={vc} value={vc}>
+                    {vc}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="pt-1.5">
             <button
               type="submit"
               disabled={!allFourChosen}
               style={checkBtnStyle}
-              className="w-full h-10 rounded-full border px-5 text-xs font-semibold inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-95 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+              className="w-full h-9 rounded-full border px-4 text-xs font-semibold inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-95 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
             >
               <span>Check Compatibility</span>
               <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
-          </div>
-        </form>
+          </form>
+        ) : (
+          <form onSubmit={handleCheckCompatibility} className="space-y-2">
+            <div className="grid grid-cols-[50px_1fr] items-center gap-2.5">
+              <label
+                htmlFor="fitment-year"
+                style={{ color: theme.textSecondary }}
+                className="text-xs font-medium"
+              >
+                Year
+              </label>
+              <select
+                id="fitment-year"
+                value={year}
+                onChange={(e) => handleYearChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+              >
+                <option value="">Select Year</option>
+                {clientConfig.fitmentOptions.years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-[50px_1fr] items-center gap-2.5">
+              <label
+                htmlFor="fitment-make"
+                style={{ color: theme.textSecondary }}
+                className="text-xs font-medium"
+              >
+                Make
+              </label>
+              <select
+                id="fitment-make"
+                value={make}
+                onChange={(e) => handleMakeChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+              >
+                <option value="">Select Make</option>
+                {clientConfig.fitmentOptions.makes.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-[50px_1fr] items-center gap-2.5">
+              <label
+                htmlFor="fitment-model"
+                style={{ color: theme.textSecondary }}
+                className="text-xs font-medium"
+              >
+                Model
+              </label>
+              <select
+                id="fitment-model"
+                value={model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+              >
+                <option value="">Select Model</option>
+                {availableModels.map((mod) => (
+                  <option key={mod} value={mod}>
+                    {mod}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-[50px_1fr] items-center gap-2.5">
+              <label
+                htmlFor="fitment-class"
+                style={{ color: theme.textSecondary }}
+                className="text-xs font-medium"
+              >
+                Class
+              </label>
+              <select
+                id="fitment-class"
+                value={vehicleClass}
+                onChange={(e) => handleClassChange(e.target.value)}
+                style={selectStyle}
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+              >
+                <option value="">Select Class</option>
+                {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
+                  <option key={vc} value={vc}>
+                    {vc}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pt-1.5">
+              <button
+                type="submit"
+                disabled={!allFourChosen}
+                style={checkBtnStyle}
+                className="w-full h-9 rounded-full border px-4 text-xs font-semibold inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-95 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+              >
+                <span>Check Compatibility</span>
+                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Result Panel */}
         {result && (
           <div
             data-testid="fitment-result-panel"
-            style={{ borderColor: '#1B283C' }}
-            className="mt-4 border-t pt-3.5 space-y-2.5"
+            style={{ borderColor: isHorizontal ? theme.border : '#1B283C' }}
+            className="mt-3.5 border-t pt-3 space-y-2.5"
           >
             <div className="flex flex-wrap items-center gap-2">
               {result.status === 'verified' ? (
@@ -281,7 +431,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                     borderColor: theme.badgeVerifiedBorder,
                     color: theme.badgeVerifiedText,
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{result.headlineBadge}</span>
@@ -293,7 +443,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                     borderColor: theme.badgeWarnBorder,
                     color: theme.badgeWarnText,
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold"
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
                 >
                   <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{result.headlineBadge}</span>
@@ -319,14 +469,20 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 <span>Attach vehicle to quote</span>
               </button>
               {attachedGroupCount > 0 && (
-                <span style={{ color: theme.accentInfo }} className="text-[11px] font-mono-tech">
+                <span
+                  style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                  className="text-[11px] font-mono-tech"
+                >
                   Active groups: {attachedGroupCount}
                 </span>
               )}
             </div>
 
             {attachedNotice && (
-              <p style={{ color: theme.accentInfo }} className="text-[11px] font-mono-tech">
+              <p
+                style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                className="text-[11px] font-mono-tech"
+              >
                 {attachedNotice}
               </p>
             )}
@@ -334,13 +490,13 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
             {recommendedHarness && (
               <div
                 style={{
-                  backgroundColor: '#09101B',
-                  borderColor: '#1B283C',
+                  backgroundColor: isHorizontal ? theme.bgElevated : '#09101B',
+                  borderColor: isHorizontal ? theme.border : '#1B283C',
                 }}
                 className="rounded-lg border p-2.5 space-y-1.5"
               >
                 <div
-                  style={{ color: theme.accentInfo }}
+                  style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
                   className="flex items-center justify-between text-[10px] font-mono-tech uppercase tracking-wider"
                 >
                   <span className="inline-flex items-center gap-1">
@@ -368,10 +524,18 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                       onAddProduct(recommendedHarness.sku);
                       setHarnessAddedNotice(true);
                     }}
-                    style={{
-                      borderColor: theme.ctaBg,
-                      color: theme.accentPrimary,
-                    }}
+                    style={
+                      theme.isLight
+                        ? {
+                            backgroundColor: theme.ctaBg,
+                            borderColor: theme.ctaBg,
+                            color: theme.ctaText,
+                          }
+                        : {
+                            borderColor: theme.ctaBg,
+                            color: theme.accentPrimary,
+                          }
+                    }
                     className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <Plus className="w-3 h-3" aria-hidden="true" />
@@ -379,7 +543,10 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   </button>
                 </div>
                 {harnessAddedNotice && (
-                  <p style={{ color: theme.accentInfo }} className="text-[11px] font-mono-tech">
+                  <p
+                    style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                    className="text-[11px] font-mono-tech"
+                  >
                     Added {recommendedHarness.sku} to quote list.
                   </p>
                 )}
@@ -390,8 +557,8 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
 
         {/* Verbatim static disclaimer note */}
         <p
-          style={{ borderColor: '#1B283C', color: theme.textMuted }}
-          className="mt-4 pt-3 border-t text-[9.5px] font-mono-tech leading-relaxed tracking-wide"
+          style={{ borderColor: isHorizontal ? theme.border : '#1B283C', color: theme.textMuted }}
+          className="mt-3 pt-2.5 border-t text-[9px] font-mono-tech leading-snug tracking-wide"
         >
           {clientConfig.fitmentDisclaimer}
         </p>

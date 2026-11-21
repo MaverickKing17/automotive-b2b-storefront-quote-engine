@@ -1,5 +1,6 @@
 import { clientConfig, formatCad, getTier1Price } from '../data/clientConfig';
 import type { CatalogProduct } from '../data/clientConfig';
+import { STOREFRONTS, type StorefrontId } from '../data/storefronts';
 
 export interface SpecAssistAnswer {
   answer: string;
@@ -20,21 +21,22 @@ function normalizeText(input: string): string {
 
 function isSpecOnlyTruckQuery(query: string): boolean {
   const q = normalizeText(query);
-  // Queries like "Which dashcams support 24V Class 8 trucks?" are spec-matching questions,
-  // not specific vehicle make/model fitment checks.
   const hasSpecificVehicleMakeOrModel =
     /\b(toyota|hiace|ford|transit|rivian|edv|freightliner|cascadia|sprinter|mercedes|promaster|ram|isuzu|npr|kenworth|peterbilt|volvo|hino)\b/i.test(
       q
     );
   const hasCategoryOrSpecIntent =
-    /\b(which|what|dashcam|dashcams|gateway|gateways|radar|charger|controller|sensor|harness|24v|12v|9-32v|ip67|ip65|ip54|j1939|obd|ocpp|can|usb-c|lte|price|tier|cost)\b/i.test(
+    /\b(which|what|compare|show|dashcam|dashcams|gateway|gateways|radar|charger|chargers|pedestal|pedestals|wallbox|dispenser|bollard|metering|controller|sensor|harness|tracker|trackers|eld|tablet|beacon|antenna|reefer|cold-chain|shelving|partition|bulkhead|lightbar|rack|inverter|alarm|24v|12v|9-32v|9-36v|208|240v|480v|600v|3-phase|19\.2kw|120kw|3000w|ip68|ip67|ip66|ip65|ip54|nema|j1939|obd|ocpp|modbus|can|usb-c|lte|ble|price|tier|tiers|cad|cost)\b/i.test(
       q
     );
 
   return !hasSpecificVehicleMakeOrModel && hasCategoryOrSpecIntent;
 }
 
-function matchesVerifiedMatrixEntry(query: string): {
+function matchesVerifiedMatrixEntry(
+  query: string,
+  catalog: CatalogProduct[]
+): {
   matched: boolean;
   product?: CatalogProduct;
 } {
@@ -51,7 +53,7 @@ function matchesVerifiedMatrixEntry(query: string): {
     const hasClass = q.includes(normalizeText(entry.vehicleClass));
 
     if (hasYear && hasMake && hasModel && hasClass) {
-      const mentionedProduct = clientConfig.products.find(
+      const mentionedProduct = catalog.find(
         (p) => q.includes(p.sku.toLowerCase()) || q.includes(p.name.toLowerCase())
       );
       return { matched: true, product: mentionedProduct };
@@ -61,29 +63,43 @@ function matchesVerifiedMatrixEntry(query: string): {
   return { matched: false };
 }
 
-function findMatchingProducts(query: string): CatalogProduct[] {
+function findMatchingProducts(query: string, catalog: CatalogProduct[]): CatalogProduct[] {
   const q = normalizeText(query);
   const tokens = q.split(' ').filter((t) => t.length >= 2);
 
-  const scored = clientConfig.products.map((product) => {
+  const scored = catalog.map((product) => {
     let score = 0;
     const skuLower = product.sku.toLowerCase();
     const nameLower = product.name.toLowerCase();
     const catLower = product.category.toLowerCase();
     const specBlob = `${product.specs.power} ${product.specs.interface} ${product.specs.ipRating} ${product.description}`.toLowerCase();
 
-    if (q.includes(skuLower)) score += 20;
+    if (q.includes(skuLower)) score += 24;
     if (q.includes('dashcam') || q.includes('dashcams')) {
-      if (product.name.toLowerCase().includes('dashcam')) score += 12;
+      if (nameLower.includes('dashcam')) score += 12;
       else if (product.category === 'Video Telematics') score += 4;
     }
-    if (q.includes('class 8') && (product.specs.power.includes('24V') || product.specs.interface.includes('J1939'))) {
+    if (
+      q.includes('class 8') &&
+      (product.specs.power.includes('24V') ||
+        product.specs.power.includes('36V') ||
+        product.specs.interface.includes('J1939'))
+    ) {
       score += 6;
     }
     if (q.includes('24v') && product.specs.power.toLowerCase().includes('24v')) {
       score += 8;
     }
     if (q.includes('12v') && product.specs.power.toLowerCase().includes('12v')) {
+      score += 8;
+    }
+    if (q.includes('480v') && specBlob.includes('480v')) {
+      score += 10;
+    }
+    if (q.includes('240v') && specBlob.includes('240v')) {
+      score += 8;
+    }
+    if (q.includes('ocpp') && specBlob.includes('ocpp')) {
       score += 8;
     }
 
@@ -107,8 +123,14 @@ function findMatchingProducts(query: string): CatalogProduct[] {
   return filtered.map((item) => item.product);
 }
 
-export function answerSpecAssistQuestion(rawQuery: string): SpecAssistAnswer {
+export function answerSpecAssistQuestion(
+  rawQuery: string,
+  storefrontId: StorefrontId = 'astrateq'
+): SpecAssistAnswer {
   const query = rawQuery.trim();
+  const storefront = STOREFRONTS[storefrontId] ?? STOREFRONTS.astrateq;
+  const catalog = storefront.products;
+
   if (!query) {
     return {
       answer:
@@ -124,14 +146,11 @@ export function answerSpecAssistQuestion(rawQuery: string): SpecAssistAnswer {
     (FITMENT_INTENT_PATTERN.test(query) || VEHICLE_MENTION_PATTERN.test(query));
 
   if (isFitmentQuery) {
-    const verifiedCheck = matchesVerifiedMatrixEntry(query);
+    const verifiedCheck = matchesVerifiedMatrixEntry(query, catalog);
     if (verifiedCheck.matched) {
-      const targetSku = verifiedCheck.product?.sku ?? 'AST-104';
-      const targetProduct =
-        verifiedCheck.product ?? clientConfig.products.find((p) => p.sku === targetSku);
-      const specsSummary = targetProduct
-        ? `${targetProduct.name} (${targetProduct.specs.power} · ${targetProduct.specs.interface} · ${targetProduct.specs.ipRating})`
-        : 'published catalog hardware';
+      const targetProduct = verifiedCheck.product ?? catalog[0];
+      const targetSku = targetProduct.sku;
+      const specsSummary = `${targetProduct.name} (${targetProduct.specs.power} · ${targetProduct.specs.interface} · ${targetProduct.specs.ipRating})`;
 
       return {
         answer: `Verified: 2025 Rivian EDV 700 (Commercial EV) matches a verified vehicle profile in the published fitment matrix for ${specsSummary}. Source: ${targetSku}`,
@@ -141,7 +160,6 @@ export function answerSpecAssistQuestion(rawQuery: string): SpecAssistAnswer {
       };
     }
 
-    // All other vehicle fitment questions return the exact required escalation string
     return {
       answer: clientConfig.specAssistEscalationText,
       matchedSkus: [],
@@ -150,12 +168,12 @@ export function answerSpecAssistQuestion(rawQuery: string): SpecAssistAnswer {
     };
   }
 
-  // 2. Otherwise, answer specification / catalog questions strictly from clientConfig
-  const matches = findMatchingProducts(query);
+  // 2. Otherwise, answer specification / catalog questions strictly from the active storefront catalog
+  const matches = findMatchingProducts(query, catalog);
   if (matches.length === 0) {
+    const skuList = catalog.map((p) => p.sku).join(', ');
     return {
-      answer:
-        'No matching hardware was found in the published catalog data. Ask about AST-104, AST-208, AST-316, AST-422, AST-537, or AST-640, or specify power (12V/24V, 9–32V DC, wide-range DC), interface (4G LTE, J1939, OBD-II, CAN, OCPP 1.6), or IP rating.',
+      answer: `No matching hardware was found in the published ${storefront.brandName} catalog data. Ask about ${skuList}, or query by power input, interface, enclosure rating, or CAD tiers.`,
       matchedSkus: [],
       isFitmentResponse: false,
     };
@@ -164,7 +182,10 @@ export function answerSpecAssistQuestion(rawQuery: string): SpecAssistAnswer {
   const topMatches = matches.slice(0, 3);
   const lines = topMatches.map((p) => {
     const tier1 = getTier1Price(p);
-    return `${p.name} (${p.category}): Power ${p.specs.power} | Interface ${p.specs.interface} | Rating ${p.specs.ipRating} | From ${formatCad(tier1)} / ${p.unitLabel}`;
+    const tier2 = p.tiers[1];
+    const tier2Text =
+      tier2 && tier2.unitPrice !== null ? ` | ${tier2.label}: ${formatCad(tier2.unitPrice)}` : '';
+    return `${p.name} (${p.category}): Power ${p.specs.power} | Interface ${p.specs.interface} | Rating ${p.specs.ipRating} | From ${formatCad(tier1)} / ${p.unitLabel}${tier2Text}`;
   });
 
   const citation = `Source: ${topMatches.map((p) => p.sku).join(', ')}`;

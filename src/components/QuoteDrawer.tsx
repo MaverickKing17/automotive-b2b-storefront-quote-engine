@@ -18,12 +18,14 @@ import {
   clientConfig,
   evaluateVehicleFitment,
   formatCad,
-  getProductBySku,
   getTier1Price,
   getTierForQuantity,
+  type PolicyItem,
 } from '../data/clientConfig';
-import type { PolicyItem } from '../data/clientConfig';
-import type { StorefrontConfig } from '../data/storefronts';
+import {
+  getProductBySkuAcrossAll,
+  type StorefrontConfig,
+} from '../data/storefronts';
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -99,8 +101,13 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     submittedRecord,
   } = quoteState;
 
-  const harnessProduct = getProductBySku('AST-640');
-  const harnessInQuote = lineItems.some((item) => item.sku === 'AST-640');
+  const recommendedAddonProduct = getProductBySkuAcrossAll(
+    storefront.recommendedAddonSku,
+    storefront.id
+  );
+  const addonInQuote = recommendedAddonProduct
+    ? lineItems.some((item) => item.sku === recommendedAddonProduct.sku)
+    : false;
 
   const manualModels = manualMake
     ? clientConfig.fitmentOptions.modelsByMake[manualMake] ??
@@ -192,7 +199,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       .slice(-3)}`;
 
     const computedLines = lineItems.map((item) => {
-      const product = getProductBySku(item.sku);
+      const product = getProductBySkuAcrossAll(item.sku, storefront.id);
       if (!product) {
         return { sku: item.sku, quantity: item.quantity };
       }
@@ -201,6 +208,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       return {
         sku: product.sku,
         name: product.name,
+        category: product.category,
         quantity: item.quantity,
         unitLabel: product.unitLabel,
         activeTier: tier.label,
@@ -240,38 +248,35 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     };
 
     try {
-      const webhookUrl = clientConfig.webhookUrl.trim();
-      if (webhookUrl) {
-        const res = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          throw new Error(`Webhook responded with status ${res.status}`);
-        }
-        onSetSubmittedRecord({
-          quoteId,
-          idempotencyKey: quoteId,
-          submittedAt: payload.createdAt,
-          mode: 'webhook',
-          webhookStatus: `Delivered (${res.status})`,
-          payload,
-        });
-      } else {
-        onSetSubmittedRecord({
-          quoteId,
-          idempotencyKey: quoteId,
-          submittedAt: payload.createdAt,
-          mode: 'local-demo',
-          payload,
-        });
+      const externalWebhook = clientConfig.webhookUrl.trim();
+      const targetEndpoint = externalWebhook || '/api/rfq';
+      const res = await fetch(targetEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = (await res.json().catch(() => null)) as
+        | { ok?: boolean; persistedAt?: string; error?: string }
+        | null;
+
+      if (!res.ok) {
+        throw new Error(responseData?.error || `Server responded with status ${res.status}`);
       }
+
+      onSetSubmittedRecord({
+        quoteId,
+        idempotencyKey: quoteId,
+        submittedAt: responseData?.persistedAt || payload.createdAt,
+        mode: externalWebhook ? 'webhook' : 'backend-api',
+        webhookStatus: `Persisted (${res.status})`,
+        payload,
+      });
     } catch (err) {
       setSubmitError(
         err instanceof Error
-          ? `Webhook delivery failed: ${err.message}. Verify endpoint configuration.`
-          : 'Webhook delivery failed.'
+          ? `RFQ submission failed: ${err.message}.`
+          : 'RFQ submission failed. Please verify backend connectivity.'
       );
     } finally {
       setIsSubmitting(false);
@@ -279,7 +284,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   };
 
   const pricedSubtotal = lineItems.reduce((sum, item) => {
-    const product = getProductBySku(item.sku);
+    const product = getProductBySkuAcrossAll(item.sku, storefront.id);
     if (!product) return sum;
     const tier = getTierForQuantity(product, item.quantity);
     if (tier.unitPrice === null) return sum;
@@ -289,7 +294,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const hasFormalQuoteLine =
     installationRequested ||
     lineItems.some((item) => {
-      const product = getProductBySku(item.sku);
+      const product = getProductBySkuAcrossAll(item.sku, storefront.id);
       return product ? getTierForQuantity(product, item.quantity).unitPrice === null : false;
     });
 
@@ -298,6 +303,18 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     borderColor: theme.borderStrong,
     color: theme.textPrimary,
   };
+
+  const fleetSizeOptions =
+    storefront.id === 'northlink' && storefront.northlinkOptions
+      ? storefront.northlinkOptions.fleetSizes
+      : storefront.id === 'voltdepot' && storefront.chargingOptions
+        ? storefront.chargingOptions.fleetSizes
+        : [...clientConfig.deploymentOptions.fleetSizes];
+
+  const installOptions =
+    storefront.id === 'truenorth' && storefront.upfitWorkflowOptions
+      ? storefront.upfitWorkflowOptions.installationRequirements
+      : [...clientConfig.deploymentOptions.installationPreferences];
 
   return (
     <div
@@ -329,7 +346,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
               style={{ color: infoColor }}
               className="text-[11px] font-mono-tech uppercase tracking-[0.16em]"
             >
-              {submittedRecord ? 'RFQ RECORDED' : stepLabels[currentStep]}
+              {submittedRecord ? 'RFQ PERSISTED' : `${stepLabels[currentStep]} · ${storefront.brandTitleMain}`}
             </div>
             <h2 className="font-display text-lg font-bold mt-0.5">
               {submittedRecord ? 'Fleet Quote Reference' : stepTitles[currentStep]}
@@ -405,7 +422,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   <span>
                     {submittedRecord.mode === 'webhook'
                       ? 'RFQ Submitted to Configured Webhook'
-                      : 'Demo Mode — Recorded Locally'}
+                      : submittedRecord.mode === 'backend-api'
+                        ? 'RFQ Persisted to Backend'
+                        : 'Demo Mode — Recorded Locally'}
                   </span>
                 </div>
 
@@ -413,23 +432,25 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   Quote ID: <span className="font-mono-tech">{submittedRecord.quoteId}</span>
                 </h3>
 
-                {submittedRecord.mode === 'local-demo' ? (
+                {submittedRecord.mode === 'backend-api' ? (
                   <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                    No external webhook URL is configured in{' '}
-                    <code className="font-mono-tech">clientConfig</code>. Your RFQ request was
-                    recorded locally in browser storage for demo purposes only—it has not been
-                    transmitted to an external CRM or server.
+                    Your {storefront.brandName} RFQ payload was saved by the Express backend API (
+                    <code className="font-mono-tech">/api/rfq</code>) with idempotencyKey{' '}
+                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
+                  </p>
+                ) : submittedRecord.mode === 'webhook' ? (
+                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
+                    JSON RFQ payload delivered to the configured webhook endpoint with idempotencyKey{' '}
+                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
                   </p>
                 ) : (
                   <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                    JSON RFQ payload delivered to the configured webhook endpoint with
-                    idempotencyKey{' '}
-                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
+                    Recorded locally in browser storage.
                   </p>
                 )}
 
                 <div style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
-                  Recorded at: {new Date(submittedRecord.submittedAt).toLocaleString('en-CA')}
+                  Persisted at: {new Date(submittedRecord.submittedAt).toLocaleString('en-CA')}
                 </div>
               </div>
 
@@ -521,7 +542,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         Hardware Line Items ({lineItems.length})
                       </h3>
                       <span style={{ color: theme.textMuted }} className="text-[11px] font-mono-tech">
-                        CAD tier pricing
+                        CAD tier pricing (sample)
                       </span>
                     </div>
 
@@ -534,13 +555,13 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         }}
                         className="border border-dashed p-5 text-sm"
                       >
-                        No hardware SKUs added yet. Select items from the Hardware Catalog or add
-                        optional wiring below.
+                        No hardware SKUs added yet. Select items from the {storefront.brandName} catalog
+                        or add optional equipment below.
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {lineItems.map((item) => {
-                          const product = getProductBySku(item.sku);
+                          const product = getProductBySkuAcrossAll(item.sku, storefront.id);
                           if (!product) return null;
                           const activeTier = getTierForQuantity(product, item.quantity);
                           const isFormalQuote = activeTier.unitPrice === null;
@@ -748,7 +769,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       Optional Add-ons (Buyer-Added Only)
                     </div>
 
-                    {harnessProduct && (
+                    {recommendedAddonProduct && (
                       <div
                         style={{
                           backgroundColor: theme.bgSurface,
@@ -757,26 +778,35 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         className="flex items-center justify-between gap-3 border p-3"
                       >
                         <div>
-                          <div className="text-xs font-semibold">{harnessProduct.name}</div>
+                          <div className="text-xs font-semibold">{recommendedAddonProduct.name}</div>
                           <div
                             style={{ color: theme.textSecondary }}
                             className="text-[11px] font-mono-tech mt-0.5"
                           >
-                            From {formatCad(getTier1Price(harnessProduct))} /{' '}
-                            {harnessProduct.unitLabel} · {harnessProduct.specs.interface}
+                            From {formatCad(getTier1Price(recommendedAddonProduct))} /{' '}
+                            {recommendedAddonProduct.unitLabel} ·{' '}
+                            {recommendedAddonProduct.specs.interface}
                           </div>
                         </div>
                         <button
                           type="button"
-                          onClick={() => onAddProduct(harnessProduct.sku)}
-                          style={{
-                            borderColor: theme.ctaBg,
-                            color: theme.isLight ? theme.ctaBg : theme.accentPrimary,
-                          }}
+                          onClick={() => onAddProduct(recommendedAddonProduct.sku)}
+                          style={
+                            theme.isLight
+                              ? {
+                                  backgroundColor: theme.ctaBg,
+                                  borderColor: theme.ctaBg,
+                                  color: theme.ctaText,
+                                }
+                              : {
+                                  borderColor: theme.ctaBg,
+                                  color: theme.accentPrimary,
+                                }
+                          }
                           className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                          <span>{harnessInQuote ? 'Add another' : 'Add'}</span>
+                          <span>{addonInQuote ? 'Add another' : 'Add'}</span>
                         </button>
                       </div>
                     )}
@@ -790,10 +820,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     >
                       <div>
                         <div className="text-xs font-semibold">
-                          {clientConfig.deploymentOptions.installationAddon.label}
+                          {storefront.installationAddonLabel}
                         </div>
                         <div style={{ color: theme.textSecondary }} className="text-[11px] mt-0.5">
-                          {clientConfig.deploymentOptions.installationAddon.note}
+                          {storefront.installationAddonNote}
                         </div>
                       </div>
                       <button
@@ -806,10 +836,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                 borderColor: theme.badgeVerifiedBorder,
                                 color: theme.badgeVerifiedText,
                               }
-                            : {
-                                borderColor: theme.ctaBg,
-                                color: theme.isLight ? theme.ctaBg : theme.accentPrimary,
-                              }
+                            : theme.isLight
+                              ? {
+                                  backgroundColor: theme.ctaBg,
+                                  borderColor: theme.ctaBg,
+                                  color: theme.ctaText,
+                                }
+                              : {
+                                  borderColor: theme.ctaBg,
+                                  color: theme.accentPrimary,
+                                }
                         }
                         className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                       >
@@ -1072,13 +1108,19 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* Deployment Questions */}
+                  {/* Storefront-Differentiated Deployment Questions */}
                   <div style={{ borderColor: theme.border }} className="border-t pt-5 space-y-4">
                     <h3
                       style={{ color: infoColor }}
                       className="text-xs font-mono-tech uppercase tracking-wider"
                     >
-                      Deployment Parameters
+                      {storefront.id === 'northlink'
+                        ? 'Telematics & Connectivity Parameters'
+                        : storefront.id === 'voltdepot'
+                          ? 'Depot Charging & Electrical Parameters'
+                          : storefront.id === 'truenorth'
+                            ? 'Upfitting Scope & Hub Parameters'
+                            : 'Deployment Parameters'}
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1088,7 +1130,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           style={{ color: theme.textSecondary }}
                           className="block text-[11px] font-mono-tech uppercase mb-1"
                         >
-                          Installation preference
+                          {storefront.id === 'truenorth'
+                            ? 'Installation requirement'
+                            : 'Installation preference'}
                         </label>
                         <select
                           id="deploy-install"
@@ -1099,7 +1143,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           style={inputStyle}
                           className="w-full h-10 rounded-xs border px-2.5 text-xs"
                         >
-                          {clientConfig.deploymentOptions.installationPreferences.map((pref) => (
+                          {installOptions.map((pref) => (
                             <option key={pref} value={pref}>
                               {pref}
                             </option>
@@ -1122,7 +1166,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           style={inputStyle}
                           className="w-full h-10 rounded-xs border px-2.5 text-xs"
                         >
-                          {clientConfig.deploymentOptions.fleetSizes.map((band) => (
+                          {fleetSizeOptions.map((band) => (
                             <option key={band} value={band}>
                               {band}
                             </option>
@@ -1153,6 +1197,307 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         </select>
                       </div>
                     </div>
+
+                    {storefront.id === 'northlink' && storefront.northlinkOptions && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                          <label
+                            htmlFor="deploy-nl-vehicles"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Vehicle types
+                          </label>
+                          <select
+                            id="deploy-nl-vehicles"
+                            value={
+                              deployment.vehicleTypes || storefront.northlinkOptions.vehicleTypes[0]
+                            }
+                            onChange={(e) => onUpdateDeployment({ vehicleTypes: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.northlinkOptions.vehicleTypes.map((vt) => (
+                              <option key={vt} value={vt}>
+                                {vt}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="deploy-nl-tracking"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Tracking requirements
+                          </label>
+                          <select
+                            id="deploy-nl-tracking"
+                            value={
+                              deployment.trackingRequirements ||
+                              storefront.northlinkOptions.trackingRequirements[0]
+                            }
+                            onChange={(e) =>
+                              onUpdateDeployment({ trackingRequirements: e.target.value })
+                            }
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.northlinkOptions.trackingRequirements.map((tr) => (
+                              <option key={tr} value={tr}>
+                                {tr}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="deploy-nl-conn"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Connectivity
+                          </label>
+                          <select
+                            id="deploy-nl-conn"
+                            value={
+                              deployment.connectivityPreference ||
+                              storefront.northlinkOptions.connectivityPreferences[0]
+                            }
+                            onChange={(e) =>
+                              onUpdateDeployment({ connectivityPreference: e.target.value })
+                            }
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.northlinkOptions.connectivityPreferences.map((cp) => (
+                              <option key={cp} value={cp}>
+                                {cp}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {storefront.id === 'voltdepot' && storefront.chargingOptions && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label
+                            htmlFor="deploy-charging-type"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Charging requirements
+                          </label>
+                          <select
+                            id="deploy-charging-type"
+                            value={
+                              deployment.chargingType || storefront.chargingOptions.chargingTypes[0]
+                            }
+                            onChange={(e) => onUpdateDeployment({ chargingType: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.chargingOptions.chargingTypes.map((ct) => (
+                              <option key={ct} value={ct}>
+                                {ct}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="deploy-charging-bays"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Number of charging bays
+                          </label>
+                          <select
+                            id="deploy-charging-bays"
+                            value={
+                              deployment.chargingBays || storefront.chargingOptions.chargingBays[0]
+                            }
+                            onChange={(e) => onUpdateDeployment({ chargingBays: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.chargingOptions.chargingBays.map((cb) => (
+                              <option key={cb} value={cb}>
+                                {cb}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="deploy-site-conditions"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Site conditions
+                          </label>
+                          <select
+                            id="deploy-site-conditions"
+                            value={
+                              deployment.siteConditions ||
+                              storefront.chargingOptions.siteConditions[0]
+                            }
+                            onChange={(e) => onUpdateDeployment({ siteConditions: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.chargingOptions.siteConditions.map((sc) => (
+                              <option key={sc} value={sc}>
+                                {sc}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="deploy-electrical-service"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Electrical requirements
+                          </label>
+                          <select
+                            id="deploy-electrical-service"
+                            value={
+                              deployment.electricalService ||
+                              storefront.chargingOptions.electricalServices[0]
+                            }
+                            onChange={(e) =>
+                              onUpdateDeployment({ electricalService: e.target.value })
+                            }
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.chargingOptions.electricalServices.map((es) => (
+                              <option key={es} value={es}>
+                                {es}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label
+                            htmlFor="deploy-site-region"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Depot region
+                          </label>
+                          <select
+                            id="deploy-site-region"
+                            value={deployment.siteLocation || storefront.chargingOptions.regions[0]}
+                            onChange={(e) => onUpdateDeployment({ siteLocation: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.chargingOptions.regions.map((reg) => (
+                              <option key={reg} value={reg}>
+                                {reg}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {storefront.id === 'truenorth' && storefront.upfitLocations && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                          <label
+                            htmlFor="deploy-upfit-location"
+                            style={{ color: theme.textSecondary }}
+                            className="block text-[11px] font-mono-tech uppercase mb-1"
+                          >
+                            Upfitting hub location
+                          </label>
+                          <select
+                            id="deploy-upfit-location"
+                            value={deployment.upfitLocation || storefront.upfitLocations[0]}
+                            onChange={(e) => onUpdateDeployment({ upfitLocation: e.target.value })}
+                            style={inputStyle}
+                            className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                          >
+                            {storefront.upfitLocations.map((loc) => (
+                              <option key={loc} value={loc}>
+                                {loc}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {storefront.upfitWorkflowOptions && (
+                          <>
+                            <div>
+                              <label
+                                htmlFor="deploy-tn-use"
+                                style={{ color: theme.textSecondary }}
+                                className="block text-[11px] font-mono-tech uppercase mb-1"
+                              >
+                                Vehicle use / trade
+                              </label>
+                              <select
+                                id="deploy-tn-use"
+                                value={
+                                  deployment.vehicleUse ||
+                                  storefront.upfitWorkflowOptions.vehicleUses[0]
+                                }
+                                onChange={(e) => onUpdateDeployment({ vehicleUse: e.target.value })}
+                                style={inputStyle}
+                                className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                              >
+                                {storefront.upfitWorkflowOptions.vehicleUses.map((vu) => (
+                                  <option key={vu} value={vu}>
+                                    {vu}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor="deploy-tn-equip"
+                                style={{ color: theme.textSecondary }}
+                                className="block text-[11px] font-mono-tech uppercase mb-1"
+                              >
+                                Required equipment
+                              </label>
+                              <select
+                                id="deploy-tn-equip"
+                                value={
+                                  deployment.requiredEquipment ||
+                                  storefront.upfitWorkflowOptions.requiredEquipment[0]
+                                }
+                                onChange={(e) =>
+                                  onUpdateDeployment({ requiredEquipment: e.target.value })
+                                }
+                                style={inputStyle}
+                                className="w-full h-10 rounded-xs border px-2.5 text-xs"
+                              >
+                                {storefront.upfitWorkflowOptions.requiredEquipment.map((eq) => (
+                                  <option key={eq} value={eq}>
+                                    {eq}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {step1Error && (
@@ -1180,8 +1525,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   data-testid="drawer-step-2"
                 >
                   <p style={{ color: theme.textSecondary }} className="text-sm">
-                    Provide your fleet procurement contact details to assemble the formal RFQ
-                    summary.
+                    Provide your fleet procurement contact details to submit the {storefront.brandName} RFQ.
                   </p>
 
                   <div className="space-y-4">
@@ -1307,7 +1651,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     ) : (
                       <div className="divide-y" style={{ borderColor: theme.border }}>
                         {lineItems.map((item) => {
-                          const product = getProductBySku(item.sku);
+                          const product = getProductBySkuAcrossAll(item.sku, storefront.id);
                           if (!product) return null;
                           const tier = getTierForQuantity(product, item.quantity);
                           const total =
@@ -1346,7 +1690,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         style={{ borderColor: theme.border, color: infoColor }}
                         className="border-t pt-2.5 text-xs"
                       >
-                        + {clientConfig.deploymentOptions.installationAddon.label}
+                        + {storefront.installationAddonLabel}
                       </div>
                     )}
 
@@ -1441,7 +1785,11 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t pt-3 text-xs"
                     >
                       <div>
-                        <div style={{ color: theme.textMuted }}>Installation preference</div>
+                        <div style={{ color: theme.textMuted }}>
+                          {storefront.id === 'truenorth'
+                            ? 'Installation requirement'
+                            : 'Installation preference'}
+                        </div>
                         <div className="mt-0.5">{deployment.installationPreference}</div>
                       </div>
                       <div>
@@ -1452,6 +1800,95 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         <div style={{ color: theme.textMuted }}>Rollout timeline</div>
                         <div className="mt-0.5">{deployment.rolloutTimeline}</div>
                       </div>
+
+                      {storefront.id === 'northlink' && storefront.northlinkOptions && (
+                        <>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Vehicle types</div>
+                            <div className="mt-0.5">
+                              {deployment.vehicleTypes ||
+                                storefront.northlinkOptions.vehicleTypes[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Tracking requirements</div>
+                            <div className="mt-0.5">
+                              {deployment.trackingRequirements ||
+                                storefront.northlinkOptions.trackingRequirements[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Connectivity</div>
+                            <div className="mt-0.5">
+                              {deployment.connectivityPreference ||
+                                storefront.northlinkOptions.connectivityPreferences[0]}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {storefront.id === 'voltdepot' && storefront.chargingOptions && (
+                        <>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Charging requirements</div>
+                            <div className="mt-0.5">
+                              {deployment.chargingType ||
+                                storefront.chargingOptions.chargingTypes[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Charging bays</div>
+                            <div className="mt-0.5">
+                              {deployment.chargingBays || storefront.chargingOptions.chargingBays[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Site conditions</div>
+                            <div className="mt-0.5">
+                              {deployment.siteConditions ||
+                                storefront.chargingOptions.siteConditions[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Electrical service</div>
+                            <div className="mt-0.5">
+                              {deployment.electricalService ||
+                                storefront.chargingOptions.electricalServices[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Depot region</div>
+                            <div className="mt-0.5">
+                              {deployment.siteLocation || storefront.chargingOptions.regions[0]}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {storefront.id === 'truenorth' && (
+                        <>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Upfitting hub</div>
+                            <div className="mt-0.5">
+                              {deployment.upfitLocation || storefront.upfitLocations?.[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Vehicle use</div>
+                            <div className="mt-0.5">
+                              {deployment.vehicleUse ||
+                                storefront.upfitWorkflowOptions?.vehicleUses[0]}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: theme.textMuted }}>Required equipment</div>
+                            <div className="mt-0.5">
+                              {deployment.requiredEquipment ||
+                                storefront.upfitWorkflowOptions?.requiredEquipment[0]}
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1505,7 +1942,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <span>Buyer Policies (Sample Demo Terms)</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
-                      {clientConfig.policies.map((pol) => (
+                      {storefront.policies.map((pol) => (
                         <button
                           key={pol.id}
                           type="button"

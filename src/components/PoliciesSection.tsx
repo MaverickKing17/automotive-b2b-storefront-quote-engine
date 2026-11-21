@@ -1,15 +1,17 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
-import { clientConfig, type PolicyItem } from '../data/clientConfig';
+import type { PolicyItem } from '../data/clientConfig';
 import type { StorefrontTheme } from '../data/storefronts';
 
 interface PoliciesSectionProps {
   theme: StorefrontTheme;
+  policies: PolicyItem[];
   onOpenPolicy: (policy: PolicyItem) => void;
 }
 
 export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
   theme,
+  policies,
   onOpenPolicy,
 }) => {
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
@@ -45,7 +47,7 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {clientConfig.policies.map((policy) => (
+          {policies.map((policy) => (
             <article
               key={policy.id}
               style={{

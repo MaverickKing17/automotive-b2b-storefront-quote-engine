@@ -1,8 +1,12 @@
 import React from 'react';
-import { clientConfig } from '../data/clientConfig';
-import type { StorefrontTheme } from '../data/storefronts';
+import type { ProcessStepItem, StorefrontTheme } from '../data/storefronts';
 
-export const ProcessSection: React.FC<{ theme: StorefrontTheme }> = ({ theme }) => {
+interface ProcessSectionProps {
+  theme: StorefrontTheme;
+  steps: ProcessStepItem[];
+}
+
+export const ProcessSection: React.FC<ProcessSectionProps> = ({ theme, steps }) => {
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
 
   return (
@@ -31,7 +35,7 @@ export const ProcessSection: React.FC<{ theme: StorefrontTheme }> = ({ theme }) 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {clientConfig.processSteps.map((item) => (
+          {steps.map((item) => (
             <div
               key={item.step}
               style={{

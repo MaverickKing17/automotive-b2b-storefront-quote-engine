@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
+import { ChevronDown, MapPin, Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import type { StorefrontConfig } from '../data/storefronts';
 import { StorefrontLogo } from './BlueprintArtwork';
 
@@ -22,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme } = storefront;
+  const isAstrateq = storefront.id === 'astrateq';
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,47 +30,72 @@ export const Header: React.FC<HeaderProps> = ({
     el?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleHeaderActionClick = () => {
+    if (storefront.id === 'truenorth') {
+      const el = document.getElementById('locations');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
+    onOpenDrawer();
+  };
+
+  const searchPlaceholder =
+    storefront.id === 'voltdepot' || storefront.id === 'truenorth'
+      ? 'Search...'
+      : 'Search products...';
+
+  const iconButtonStyle: React.CSSProperties = theme.isLight
+    ? {
+        backgroundColor: '#F8FAFC',
+        borderColor: '#DCE3EC',
+        color: '#334155',
+      }
+    : {
+        backgroundColor: '#0B121D',
+        borderColor: '#1E2B3E',
+        color: '#CBD5E1',
+      };
+
   return (
     <header
       style={{
-        backgroundColor: theme.headerBg,
-        borderColor: theme.border,
+        backgroundColor: isAstrateq ? '#070C14' : theme.headerBg,
+        borderColor: isAstrateq ? '#182334' : theme.border,
         color: theme.textPrimary,
       }}
       className="sticky top-0 z-30 border-b backdrop-blur-md"
     >
-      <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-4 px-4 sm:px-6 py-3">
-        {/* Zone 1: Top-Left Logo + Stacked Brand Wordmark */}
-        <a
-          href="#top"
-          className="flex items-center gap-2.5 whitespace-nowrap shrink-0 focus-visible:outline-none"
-        >
-          <StorefrontLogo storefront={storefront} />
-          <span className="flex flex-col leading-none">
-            <span
-              style={{ color: theme.textPrimary }}
-              className="font-display text-sm sm:text-[15px] font-bold tracking-[0.12em] uppercase"
-            >
-              ASTRATEQ
+      <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-4 px-4 sm:px-6 py-2.5">
+        {/* Left Cluster: Logo + Stacked Wordmark + Nav Links */}
+        <div className="flex items-center gap-7 lg:gap-10">
+          <a
+            href="#top"
+            className="flex items-center gap-2.5 whitespace-nowrap shrink-0 focus-visible:outline-none"
+          >
+            <StorefrontLogo storefront={storefront} />
+            <span className="flex flex-col leading-none">
+              <span
+                style={{ color: theme.textPrimary }}
+                className="font-display text-sm sm:text-[15px] font-bold tracking-[0.12em] uppercase"
+              >
+                {storefront.brandTitleMain}
+              </span>
+              <span
+                style={{ color: theme.textSecondary }}
+                className="text-[9.5px] font-medium tracking-[0.28em] uppercase mt-0.5"
+              >
+                {storefront.brandTitleSub}
+              </span>
             </span>
-            <span
-              style={{ color: theme.textSecondary }}
-              className="text-[10px] font-medium tracking-[0.28em] uppercase mt-0.5"
-            >
-              GADGETS
-            </span>
-          </span>
-        </a>
+          </a>
 
-        {/* Zone 2: Compact Horizontal Nav Links */}
-        <nav
-          aria-label="Storefront navigation"
-          style={{ color: theme.textSecondary }}
-          className="hidden lg:flex items-center gap-6 text-[13px] font-medium"
-        >
-          {storefront.navLinks.map((link) => {
-            const hasChevron = link.label !== 'About';
-            return (
+          <nav
+            aria-label="Storefront navigation"
+            className="hidden lg:flex items-center gap-6 text-[13px] font-medium"
+          >
+            {storefront.navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
@@ -78,19 +104,19 @@ export const Header: React.FC<HeaderProps> = ({
                     onSelectCategory(link.category);
                   }
                 }}
-                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 py-1 hover:text-white transition-colors"
-                style={{ color: theme.textSecondary }}
+                style={{ color: theme.isLight ? theme.textSecondary : '#CBD5E1' }}
+                className="inline-flex items-center gap-1 whitespace-nowrap shrink-0 py-1 hover:opacity-100 opacity-90 transition-opacity"
               >
                 <span>{link.label}</span>
-                {hasChevron && (
+                {link.hasDropdown && (
                   <ChevronDown className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />
                 )}
               </a>
-            );
-          })}
-        </nav>
+            ))}
+          </nav>
+        </div>
 
-        {/* Zone 3: Search + Account Icon + Quote List */}
+        {/* Right Cluster: Search Field + Account Icon + Quote Cart Icon + Optional Storefront Pill */}
         <div className="flex items-center gap-2.5 shrink-0">
           <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative">
             <Search
@@ -102,14 +128,14 @@ export const Header: React.FC<HeaderProps> = ({
               type="search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search products..."
+              placeholder={searchPlaceholder}
               aria-label="Search hardware catalog"
               style={{
-                backgroundColor: '#0D1522',
-                borderColor: '#1E2C40',
+                backgroundColor: theme.isLight ? '#F8FAFC' : '#0B121D',
+                borderColor: theme.isLight ? '#DCE3EC' : '#1E2B3E',
                 color: theme.textPrimary,
               }}
-              className="w-48 xl:w-64 h-9 rounded-full border pl-9 pr-8 text-xs focus:outline-none focus:border-[#22D3EE]/60"
+              className="w-48 xl:w-60 h-9 rounded-full border pl-9 pr-8 text-xs focus:outline-none"
             />
             {searchQuery && (
               <button
@@ -127,14 +153,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenDrawer}
-            aria-label="Open fleet quote account details"
+            aria-label="Fleet account and quote contact details"
             title="Fleet Quote Account"
-            style={{
-              backgroundColor: '#0D1522',
-              borderColor: '#1E2C40',
-              color: theme.textSecondary,
-            }}
-            className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border hover:text-white hover:border-[#2A3D58] transition-colors cursor-pointer shrink-0"
+            style={iconButtonStyle}
+            className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border hover:opacity-85 transition-opacity cursor-pointer shrink-0"
           >
             <User className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -143,18 +165,40 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenDrawer}
             data-testid="header-quote-list-btn"
-            style={{
-              backgroundColor: theme.ctaBg,
-              color: theme.ctaText,
-            }}
-            className="inline-flex items-center gap-2 rounded-full px-3.5 sm:px-4 h-9 text-xs font-semibold tracking-wide transition-opacity hover:opacity-90 whitespace-nowrap shrink-0 cursor-pointer"
+            aria-label={`Open Quote List (${lineItemCount} line items)`}
+            title={`Quote List (${lineItemCount} items)`}
+            style={iconButtonStyle}
+            className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border hover:opacity-85 transition-opacity cursor-pointer shrink-0"
           >
-            <ShoppingBag className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{storefront.quoteButtonLabel}</span>
-            <span className="font-mono-tech font-bold" data-testid="quote-line-item-count">
-              ({lineItemCount})
+            <ShoppingCart className="w-4 h-4" aria-hidden="true" />
+            <span
+              data-testid="quote-line-item-count"
+              style={{
+                backgroundColor: theme.isLight ? theme.accentPrimary : isAstrateq ? theme.accentInfo : theme.ctaBg,
+                color: theme.isLight ? '#FFFFFF' : isAstrateq ? '#06131D' : theme.ctaText,
+              }}
+              className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 rounded-full text-[10px] font-mono-tech font-bold flex items-center justify-center leading-none"
+            >
+              {lineItemCount}
             </span>
           </button>
+
+          {storefront.headerActionLabel && (
+            <button
+              type="button"
+              onClick={handleHeaderActionClick}
+              style={{
+                backgroundColor: theme.ctaBg,
+                color: theme.ctaText,
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-4 h-9 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+            >
+              {storefront.id === 'truenorth' && (
+                <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
+              )}
+              <span>{storefront.headerActionLabel}</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -187,17 +231,17 @@ export const Header: React.FC<HeaderProps> = ({
               type="search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search products..."
+              placeholder={searchPlaceholder}
               aria-label="Search hardware catalog mobile"
               style={{
-                backgroundColor: '#0D1522',
-                borderColor: '#1E2C40',
+                backgroundColor: theme.bgInput,
+                borderColor: theme.border,
                 color: theme.textPrimary,
               }}
               className="w-full h-9 rounded-full border pl-9 pr-3 text-xs focus:outline-none"
             />
           </form>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {storefront.navLinks.map((link) => (
               <a
                 key={link.label}

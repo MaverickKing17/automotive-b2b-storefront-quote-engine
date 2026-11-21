@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
   clientConfig,
-  getProductBySku,
   getTierForQuantity,
   type CatalogProduct,
   type PolicyItem,
 } from './data/clientConfig';
-import { STOREFRONTS } from './data/storefronts';
+import {
+  getProductBySkuAcrossAll,
+  STOREFRONTS,
+  STOREFRONT_ORDER,
+  type StorefrontId,
+} from './data/storefronts';
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -15,6 +19,7 @@ import type {
   VehicleGroup,
   VehicleSelection,
 } from './types/quote';
+import { StorefrontSwitcher } from './components/StorefrontSwitcher';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { CategoryShowcase } from './components/CategoryShowcase';
@@ -27,40 +32,73 @@ import { ProductSpecsModal } from './components/ProductSpecsModal';
 import { PolicyModal } from './components/PolicyModal';
 import { QuoteDrawer } from './components/QuoteDrawer';
 
-const STORAGE_KEY = 'astrateq_fleet_quote_v1';
+const getStorageKey = (storefrontId: StorefrontId) =>
+  storefrontId === 'astrateq'
+    ? 'astrateq_fleet_quote_v1'
+    : `astrateq_fleet_quote_v1_${storefrontId}`;
 
-const createInitialQuoteState = (): PersistedQuoteState => ({
-  lineItems: [],
-  vehicleGroups: [],
-  installationRequested: false,
-  deployment: {
-    installationPreference: clientConfig.deploymentOptions.installationPreferences[0],
-    fleetSize: clientConfig.deploymentOptions.fleetSizes[0],
-    rolloutTimeline: clientConfig.deploymentOptions.rolloutTimelines[0],
-  },
-  contact: {
-    fullName: '',
-    companyName: '',
-    workEmail: '',
-    phone: '',
-  },
-  currentStep: 1,
-  submittedRecord: null,
-});
+const createInitialQuoteState = (storefrontId: StorefrontId): PersistedQuoteState => {
+  const cfg = STOREFRONTS[storefrontId];
+  return {
+    lineItems: [],
+    vehicleGroups: [],
+    installationRequested: false,
+    deployment: {
+      installationPreference:
+        storefrontId === 'truenorth' && cfg.upfitWorkflowOptions
+          ? cfg.upfitWorkflowOptions.installationRequirements[0]
+          : clientConfig.deploymentOptions.installationPreferences[0],
+      fleetSize:
+        storefrontId === 'northlink' && cfg.northlinkOptions
+          ? cfg.northlinkOptions.fleetSizes[1]
+          : storefrontId === 'voltdepot' && cfg.chargingOptions
+            ? cfg.chargingOptions.fleetSizes[1]
+            : clientConfig.deploymentOptions.fleetSizes[0],
+      rolloutTimeline: clientConfig.deploymentOptions.rolloutTimelines[0],
+      vehicleTypes: cfg.northlinkOptions?.vehicleTypes[0],
+      trackingRequirements: cfg.northlinkOptions?.trackingRequirements[0],
+      connectivityPreference: cfg.northlinkOptions?.connectivityPreferences[0],
+      chargingType: cfg.chargingOptions?.chargingTypes[0],
+      chargingBays: cfg.chargingOptions?.chargingBays[0],
+      siteConditions: cfg.chargingOptions?.siteConditions[0],
+      electricalService: cfg.chargingOptions?.electricalServices[0],
+      siteLocation: cfg.chargingOptions?.regions[0],
+      vehicleUse: cfg.upfitWorkflowOptions?.vehicleUses[0],
+      requiredEquipment: cfg.upfitWorkflowOptions?.requiredEquipment[0],
+      upfitLocation: cfg.upfitLocations?.[0],
+    },
+    contact: {
+      fullName: '',
+      companyName: '',
+      workEmail: '',
+      phone: '',
+    },
+    currentStep: 1,
+    submittedRecord: null,
+  };
+};
 
-function loadQuoteState(): PersistedQuoteState {
+function loadQuoteState(storefrontId: StorefrontId): PersistedQuoteState {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createInitialQuoteState();
+    const raw = window.localStorage.getItem(getStorageKey(storefrontId));
+    const defaults = createInitialQuoteState(storefrontId);
+    if (!raw) return defaults;
     const parsed = JSON.parse(raw) as Partial<PersistedQuoteState>;
-    const defaults = createInitialQuoteState();
+    const mergedDeployment = { ...defaults.deployment, ...(parsed.deployment ?? {}) };
+    if (
+      storefrontId === 'northlink' &&
+      STOREFRONTS.northlink.northlinkOptions &&
+      !STOREFRONTS.northlink.northlinkOptions.fleetSizes.includes(mergedDeployment.fleetSize)
+    ) {
+      mergedDeployment.fleetSize = defaults.deployment.fleetSize;
+    }
     return {
       lineItems: Array.isArray(parsed.lineItems) ? parsed.lineItems : defaults.lineItems,
       vehicleGroups: Array.isArray(parsed.vehicleGroups)
         ? parsed.vehicleGroups
         : defaults.vehicleGroups,
       installationRequested: Boolean(parsed.installationRequested),
-      deployment: { ...defaults.deployment, ...(parsed.deployment ?? {}) },
+      deployment: mergedDeployment,
       contact: { ...defaults.contact, ...(parsed.contact ?? {}) },
       currentStep:
         parsed.currentStep === 1 || parsed.currentStep === 2 || parsed.currentStep === 3
@@ -69,30 +107,92 @@ function loadQuoteState(): PersistedQuoteState {
       submittedRecord: parsed.submittedRecord ?? null,
     };
   } catch {
-    return createInitialQuoteState();
+    return createInitialQuoteState(storefrontId);
   }
 }
 
+function getStorefrontFromLocation(): StorefrontId {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const storeParam = params.get('store') as StorefrontId | null;
+    if (storeParam && STOREFRONT_ORDER.includes(storeParam)) {
+      return storeParam;
+    }
+    const hashValue = window.location.hash.replace(/^#\/?/, '').toLowerCase() as StorefrontId;
+    if (hashValue && STOREFRONT_ORDER.includes(hashValue)) {
+      return hashValue;
+    }
+  } catch {
+    // Ignore URL parsing errors
+  }
+  return 'astrateq';
+}
+
 export default function App() {
-  const [quoteState, setQuoteState] = useState<PersistedQuoteState>(loadQuoteState);
+  const [storefrontId, setStorefrontId] = useState<StorefrontId>(getStorefrontFromLocation);
+  const [quoteState, setQuoteState] = useState<PersistedQuoteState>(() =>
+    loadQuoteState(getStorefrontFromLocation())
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Hardware');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeSpecsProduct, setActiveSpecsProduct] = useState<CatalogProduct | null>(null);
   const [activePolicy, setActivePolicy] = useState<PolicyItem | null>(null);
 
-  const activeStorefront = STOREFRONTS.astrateq;
+  const activeStorefront = STOREFRONTS[storefrontId];
+
+  useEffect(() => {
+    document.title = `${activeStorefront.brandName} — ${activeStorefront.roleTitle}`;
+  }, [activeStorefront]);
+
+  useEffect(() => {
+    const handleLocationSync = () => {
+      const nextId = getStorefrontFromLocation();
+      setStorefrontId(nextId);
+      setQuoteState(loadQuoteState(nextId));
+      setSelectedCategory(STOREFRONTS[nextId].defaultCategory);
+      setSearchQuery('');
+    };
+    window.addEventListener('popstate', handleLocationSync);
+    window.addEventListener('hashchange', handleLocationSync);
+    return () => {
+      window.removeEventListener('popstate', handleLocationSync);
+      window.removeEventListener('hashchange', handleLocationSync);
+    };
+  }, []);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quoteState));
+      window.localStorage.setItem(getStorageKey(storefrontId), JSON.stringify(quoteState));
     } catch {
       // Ignore storage quota errors
     }
-  }, [quoteState]);
+  }, [quoteState, storefrontId]);
+
+  const handleSelectStorefront = (nextId: StorefrontId) => {
+    setStorefrontId(nextId);
+    setQuoteState(loadQuoteState(nextId));
+    setSelectedCategory(STOREFRONTS[nextId].defaultCategory);
+    setSearchQuery('');
+    setDrawerOpen(false);
+    setActiveSpecsProduct(null);
+    setActivePolicy(null);
+    try {
+      const url = new URL(window.location.href);
+      url.hash = '';
+      if (nextId === 'astrateq') {
+        url.searchParams.delete('store');
+      } else {
+        url.searchParams.set('store', nextId);
+      }
+      window.history.pushState({}, '', url.toString());
+    } catch {
+      // Ignore history API issues
+    }
+  };
 
   const handleAddProduct = (sku: string) => {
-    const product = getProductBySku(sku);
+    const product = getProductBySkuAcrossAll(sku, storefrontId);
     if (!product) return;
 
     setQuoteState((prev) => {
@@ -130,7 +230,7 @@ export default function App() {
   };
 
   const handleUpdateQuantity = (sku: string, nextQty: number) => {
-    const product = getProductBySku(sku);
+    const product = getProductBySkuAcrossAll(sku, storefrontId);
     if (!product) return;
     const safeQty = Math.max(1, Math.floor(nextQty) || 1);
 
@@ -229,7 +329,7 @@ export default function App() {
   };
 
   const handleResetQuote = () => {
-    setQuoteState(createInitialQuoteState());
+    setQuoteState(createInitialQuoteState(storefrontId));
   };
 
   return (
@@ -240,6 +340,8 @@ export default function App() {
       }}
       className="min-h-screen flex flex-col transition-colors duration-200"
     >
+      <StorefrontSwitcher activeId={storefrontId} onSelect={handleSelectStorefront} />
+
       <Header
         storefront={activeStorefront}
         lineItemCount={quoteState.lineItems.length}
@@ -252,9 +354,13 @@ export default function App() {
       <main className="flex-1">
         <HeroSection
           storefront={activeStorefront}
+          deployment={quoteState.deployment}
+          onUpdateDeployment={handleUpdateDeployment}
           onOpenDrawer={() => setDrawerOpen(true)}
+          onSetStep={handleSetStep}
           onAttachVehicle={(vehicle) => handleAttachVehicleGroup(vehicle, 'finder')}
           onAddProduct={handleAddProduct}
+          onSelectCategory={setSelectedCategory}
           attachedGroupCount={quoteState.vehicleGroups.length}
         />
 
@@ -265,6 +371,12 @@ export default function App() {
 
         <HardwareCatalog
           theme={activeStorefront.theme}
+          products={activeStorefront.products}
+          categories={activeStorefront.categories}
+          demoNote={activeStorefront.demoNote}
+          catalogKicker={activeStorefront.catalogKicker}
+          catalogTitle={activeStorefront.catalogTitle}
+          catalogSubtitle={activeStorefront.catalogSubtitle}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           searchQuery={searchQuery}
@@ -274,12 +386,16 @@ export default function App() {
           onViewSpecs={setActiveSpecsProduct}
         />
 
-        <ProcessSection theme={activeStorefront.theme} />
+        <ProcessSection
+          theme={activeStorefront.theme}
+          steps={activeStorefront.processSteps}
+        />
 
-        <SpecAssistSection theme={activeStorefront.theme} />
+        <SpecAssistSection storefront={activeStorefront} />
 
         <PoliciesSection
           theme={activeStorefront.theme}
+          policies={activeStorefront.policies}
           onOpenPolicy={setActivePolicy}
         />
       </main>
@@ -287,6 +403,7 @@ export default function App() {
       <Footer
         storefront={activeStorefront}
         onOpenDrawer={() => setDrawerOpen(true)}
+        onSelectStorefront={handleSelectStorefront}
       />
 
       <ProductSpecsModal

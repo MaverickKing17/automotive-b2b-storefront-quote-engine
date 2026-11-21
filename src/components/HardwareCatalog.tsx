@@ -12,6 +12,12 @@ import { ProductSchematic } from './BlueprintArtwork';
 
 interface HardwareCatalogProps {
   theme: StorefrontTheme;
+  products: CatalogProduct[];
+  categories: string[];
+  demoNote?: string;
+  catalogKicker?: string;
+  catalogTitle?: string;
+  catalogSubtitle?: string;
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   searchQuery: string;
@@ -59,6 +65,12 @@ const ProductCardMedia: React.FC<{
 
 export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
   theme,
+  products,
+  categories,
+  demoNote = clientConfig.brand.demoNote,
+  catalogKicker = '02 · Hardware Catalog',
+  catalogTitle = 'Commercial Fleet Hardware',
+  catalogSubtitle,
   selectedCategory,
   onSelectCategory,
   searchQuery,
@@ -69,7 +81,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
 }) => {
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const filteredProducts = clientConfig.products.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     const matchesCategory =
       selectedCategory === 'All Hardware' || p.category === selectedCategory;
     if (!matchesCategory) return false;
@@ -109,20 +121,20 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
               style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
               className="text-xs font-mono-tech uppercase tracking-[0.16em]"
             >
-              02 · Hardware Catalog
+              {catalogKicker}
             </p>
             <h2
               style={{ color: theme.textPrimary }}
               className="font-display text-2xl sm:text-3xl font-bold mt-1"
             >
-              Commercial Fleet Hardware
+              {catalogTitle}
             </h2>
             <p style={{ color: theme.textSecondary }} className="mt-2 text-sm">
-              {clientConfig.catalogHeaderLine}
+              {catalogSubtitle ?? clientConfig.catalogHeaderLine}
             </p>
           </div>
           <span style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
-            {clientConfig.brand.demoNote}
+            {demoNote}
           </span>
         </div>
 
@@ -134,7 +146,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
           className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 mb-8"
         >
           <div className="flex flex-wrap items-center gap-2">
-            {clientConfig.categories.map((cat) => {
+            {categories.map((cat) => {
               const active = selectedCategory === cat;
               const activeAccent = theme.isLight ? theme.accentPrimary : theme.accentInfo;
               return (
@@ -305,7 +317,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                           From {formatCad(tier1Price)} / {product.unitLabel}
                         </div>
                         <div style={{ color: theme.textMuted }} className="text-xs mt-0.5">
-                          Volume tiers available
+                          Volume tiers available (sample data)
                         </div>
                       </div>
                       {qtyInQuote > 0 && (

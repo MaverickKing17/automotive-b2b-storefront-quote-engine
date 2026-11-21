@@ -48,6 +48,20 @@ export interface DeploymentAnswers {
   installationPreference: string;
   fleetSize: string;
   rolloutTimeline: string;
+  // NorthLink Telematics workflow fields
+  vehicleTypes?: string;
+  trackingRequirements?: string;
+  connectivityPreference?: string;
+  // VoltDepot Systems workflow fields
+  chargingType?: string;
+  chargingBays?: string;
+  siteConditions?: string;
+  electricalService?: string;
+  siteLocation?: string;
+  // TrueNorth Upfitting workflow fields
+  vehicleUse?: string;
+  requiredEquipment?: string;
+  upfitLocation?: string;
 }
 
 export interface ContactDetails {
@@ -61,7 +75,7 @@ export interface SubmittedRfqRecord {
   quoteId: string;
   idempotencyKey: string;
   submittedAt: string;
-  mode: 'webhook' | 'local-demo';
+  mode: 'backend-api' | 'webhook' | 'local-demo';
   webhookStatus?: string;
   payload: Record<string, unknown>;
 }

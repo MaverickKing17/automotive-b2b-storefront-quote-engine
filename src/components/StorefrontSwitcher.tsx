@@ -14,34 +14,39 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
 
   return (
     <div
-      aria-label="Storefront configuration switcher"
+      aria-label="Independent B2B storefront demonstrations"
       style={{
-        backgroundColor: activeStore.theme.isLight ? '#E2E8F0' : '#0B0E12',
+        backgroundColor: activeStore.theme.isLight ? '#E2E8F0' : '#05080D',
         borderBottom: `1px solid ${activeStore.theme.border}`,
         color: activeStore.theme.textSecondary,
       }}
       className="text-[11px] font-mono-tech"
     >
       <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-1.5 flex flex-wrap items-center justify-between gap-2">
-        <span className="uppercase tracking-wider opacity-80 whitespace-nowrap">
-          Storefront Config:
+        <span className="uppercase tracking-wider opacity-85 whitespace-nowrap">
+          Storefront Demos:
         </span>
         <div className="flex flex-wrap items-center gap-1.5">
           {STOREFRONT_ORDER.map((id) => {
             const cfg = STOREFRONTS[id];
             const isSelected = id === activeId;
             return (
-              <button
+              <a
                 key={id}
-                type="button"
-                onClick={() => onSelect(id)}
+                href={`?store=${id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onSelect(id);
+                }}
                 data-testid={`switch-store-${id}`}
                 style={
                   isSelected
                     ? {
-                        backgroundColor: cfg.theme.ctaBg,
-                        color: cfg.theme.ctaText,
-                        borderColor: cfg.theme.ctaBg,
+                        backgroundColor:
+                          cfg.id === 'northlink' ? cfg.theme.accentPrimary : cfg.theme.ctaBg,
+                        color: cfg.id === 'northlink' ? '#FFFFFF' : cfg.theme.ctaText,
+                        borderColor:
+                          cfg.id === 'northlink' ? cfg.theme.accentPrimary : cfg.theme.ctaBg,
                       }
                     : {
                         backgroundColor: 'transparent',
@@ -49,10 +54,10 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
                         borderColor: activeStore.theme.border,
                       }
                 }
-                className="px-2.5 py-0.5 rounded-xs border text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                className="px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
               >
                 {cfg.badgeNumber}. {cfg.shortLabel}
-              </button>
+              </a>
             );
           })}
         </div>
