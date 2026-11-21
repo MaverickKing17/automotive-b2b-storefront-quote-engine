@@ -6,6 +6,11 @@ import {
   type CatalogProduct,
   type PolicyItem,
 } from './data/clientConfig';
+import {
+  STOREFRONTS,
+  STOREFRONT_ORDER,
+  type StorefrontId,
+} from './data/storefronts';
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -14,8 +19,10 @@ import type {
   VehicleGroup,
   VehicleSelection,
 } from './types/quote';
+import { StorefrontSwitcher } from './components/StorefrontSwitcher';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
+import { CategoryShowcase } from './components/CategoryShowcase';
 import { HardwareCatalog } from './components/HardwareCatalog';
 import { ProcessSection } from './components/ProcessSection';
 import { SpecAssistSection } from './components/SpecAssistSection';
@@ -71,7 +78,21 @@ function loadQuoteState(): PersistedQuoteState {
   }
 }
 
+function getInitialStorefrontId(): StorefrontId {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const storeParam = params.get('store') as StorefrontId | null;
+    if (storeParam && STOREFRONT_ORDER.includes(storeParam)) {
+      return storeParam;
+    }
+  } catch {
+    // Ignore URL parsing errors
+  }
+  return 'astrateq';
+}
+
 export default function App() {
+  const [storefrontId, setStorefrontId] = useState<StorefrontId>(getInitialStorefrontId);
   const [quoteState, setQuoteState] = useState<PersistedQuoteState>(loadQuoteState);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Hardware');
@@ -79,13 +100,30 @@ export default function App() {
   const [activeSpecsProduct, setActiveSpecsProduct] = useState<CatalogProduct | null>(null);
   const [activePolicy, setActivePolicy] = useState<PolicyItem | null>(null);
 
+  const activeStorefront = STOREFRONTS[storefrontId];
+
   useEffect(() => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(quoteState));
     } catch {
-      // Ignore storage quota errors cleanly
+      // Ignore storage quota errors
     }
   }, [quoteState]);
+
+  const handleSelectStorefront = (nextId: StorefrontId) => {
+    setStorefrontId(nextId);
+    try {
+      const url = new URL(window.location.href);
+      if (nextId === 'astrateq') {
+        url.searchParams.delete('store');
+      } else {
+        url.searchParams.set('store', nextId);
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // Ignore history API issues
+    }
+  };
 
   const handleAddProduct = (sku: string) => {
     const product = getProductBySku(sku);
@@ -229,8 +267,17 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#171A1D] text-[#F2EFE9] flex flex-col">
+    <div
+      style={{
+        backgroundColor: activeStorefront.theme.bgCanvas,
+        color: activeStorefront.theme.textPrimary,
+      }}
+      className="min-h-screen flex flex-col transition-colors duration-200"
+    >
+      <StorefrontSwitcher activeId={storefrontId} onSelect={handleSelectStorefront} />
+
       <Header
+        storefront={activeStorefront}
         lineItemCount={quoteState.lineItems.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -240,14 +287,20 @@ export default function App() {
 
       <main className="flex-1">
         <HeroSection
+          storefront={activeStorefront}
           onOpenDrawer={() => setDrawerOpen(true)}
           onAttachVehicle={(vehicle) => handleAttachVehicleGroup(vehicle, 'finder')}
           onAddProduct={handleAddProduct}
-          onSelectCategory={setSelectedCategory}
           attachedGroupCount={quoteState.vehicleGroups.length}
         />
 
+        <CategoryShowcase
+          storefront={activeStorefront}
+          onSelectCategory={setSelectedCategory}
+        />
+
         <HardwareCatalog
+          theme={activeStorefront.theme}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           searchQuery={searchQuery}
@@ -257,24 +310,36 @@ export default function App() {
           onViewSpecs={setActiveSpecsProduct}
         />
 
-        <ProcessSection />
+        <ProcessSection theme={activeStorefront.theme} />
 
-        <SpecAssistSection />
+        <SpecAssistSection theme={activeStorefront.theme} />
 
-        <PoliciesSection onOpenPolicy={setActivePolicy} />
+        <PoliciesSection
+          theme={activeStorefront.theme}
+          onOpenPolicy={setActivePolicy}
+        />
       </main>
 
-      <Footer onOpenDrawer={() => setDrawerOpen(true)} />
+      <Footer
+        storefront={activeStorefront}
+        onOpenDrawer={() => setDrawerOpen(true)}
+      />
 
       <ProductSpecsModal
+        theme={activeStorefront.theme}
         product={activeSpecsProduct}
         onClose={() => setActiveSpecsProduct(null)}
         onAddToQuote={handleAddProduct}
       />
 
-      <PolicyModal policy={activePolicy} onClose={() => setActivePolicy(null)} />
+      <PolicyModal
+        theme={activeStorefront.theme}
+        policy={activePolicy}
+        onClose={() => setActivePolicy(null)}
+      />
 
       <QuoteDrawer
+        storefront={activeStorefront}
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         quoteState={quoteState}

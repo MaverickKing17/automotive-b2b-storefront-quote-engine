@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
+import type { StorefrontConfig } from '../data/storefronts';
 
-export const BrandMark: React.FC<{ className?: string }> = ({ className = 'w-7 h-7' }) => (
+export const BrandMark: React.FC<{ className?: string; color?: string }> = ({
+  className = 'w-7 h-7',
+  color = '#22D3EE',
+}) => (
   <svg
     viewBox="0 0 32 32"
     fill="none"
@@ -10,14 +14,65 @@ export const BrandMark: React.FC<{ className?: string }> = ({ className = 'w-7 h
   >
     <path
       d="M16 3L29 27H22.5L16 14.8L9.5 27H3L16 3Z"
-      stroke="#22D3EE"
+      stroke={color}
       strokeWidth="2"
       strokeLinejoin="miter"
     />
-    <path d="M11.2 22.5H20.8" stroke="#F2EFE9" strokeWidth="2" />
-    <circle cx="16" cy="9.5" r="1.5" fill="#22D3EE" />
+    <path d="M11.2 22.5H20.8" stroke="currentColor" strokeWidth="2" />
+    <circle cx="16" cy="9.5" r="1.5" fill={color} />
   </svg>
 );
+
+export const StorefrontLogo: React.FC<{ storefront: StorefrontConfig }> = ({ storefront }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (storefront.logoUrl && !imgFailed) {
+    return (
+      <img
+        src={storefront.logoUrl}
+        alt={`${storefront.brandName} logo`}
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+        className="h-9 w-auto max-w-[150px] object-contain"
+      />
+    );
+  }
+
+  if (storefront.id === 'northlink') {
+    return (
+      <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="28" height="28" rx="4" fill="#1D63DC" />
+        <path
+          d="M9 22V10L16 18L23 10V22"
+          stroke="#FFFFFF"
+          strokeWidth="2.4"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+        />
+      </svg>
+    );
+  }
+
+  if (storefront.id === 'voltdepot') {
+    return (
+      <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none" aria-hidden="true">
+        <path d="M4 6L16 26L28 6H22L16 16.5L10 6H4Z" fill="#84CC16" />
+        <path d="M16 12L19 7H13L16 12Z" fill="#F1F5F2" />
+      </svg>
+    );
+  }
+
+  if (storefront.id === 'truenorth') {
+    return (
+      <svg viewBox="0 0 36 28" className="w-9 h-7" fill="none" aria-hidden="true">
+        <path d="M2 24L13 5L20 17L25 10L34 24H2Z" stroke="#F5F3EF" strokeWidth="2" />
+        <path d="M13 5L17 12L13 15L9 12L13 5Z" fill="#F97316" />
+      </svg>
+    );
+  }
+
+  return <BrandMark className="w-8 h-8" color={storefront.theme.accentInfo} />;
+};
 
 export const HeroBlueprintSchematic: React.FC = () => (
   <div className="relative h-full min-h-[340px] w-full border border-[#2B3138] bg-[#14171A] blueprint-grid-fine p-5 flex flex-col justify-between overflow-hidden">

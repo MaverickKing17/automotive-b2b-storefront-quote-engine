@@ -1,25 +1,45 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { clientConfig, type PolicyItem } from '../data/clientConfig';
+import type { StorefrontTheme } from '../data/storefronts';
 
 interface PoliciesSectionProps {
+  theme: StorefrontTheme;
   onOpenPolicy: (policy: PolicyItem) => void;
 }
 
-export const PoliciesSection: React.FC<PoliciesSectionProps> = ({ onOpenPolicy }) => {
+export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
+  theme,
+  onOpenPolicy,
+}) => {
+  const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
+
   return (
-    <section id="policies" className="border-b border-[#2B3138] bg-[#14171A]">
-      <div className="mx-auto max-w-[1320px] px-6 py-14">
+    <section
+      id="policies"
+      style={{
+        backgroundColor: theme.isLight ? theme.bgElevated : theme.bgInput,
+        borderColor: theme.border,
+      }}
+      className="border-b"
+    >
+      <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-14">
         <div className="flex flex-wrap items-baseline justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs font-mono-tech uppercase tracking-[0.16em] text-[#22D3EE]">
+            <p
+              style={{ color: infoColor }}
+              className="text-xs font-mono-tech uppercase tracking-[0.16em]"
+            >
               05 · Policies &amp; Buyer Information
             </p>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F2EFE9] mt-1">
+            <h2
+              style={{ color: theme.textPrimary }}
+              className="font-display text-2xl sm:text-3xl font-bold mt-1"
+            >
               Commercial Fleet Policies
             </h2>
           </div>
-          <span className="text-xs font-mono-tech text-[#76808D]">
+          <span style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
             Sample demo policy summaries
           </span>
         </div>
@@ -28,25 +48,39 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({ onOpenPolicy }
           {clientConfig.policies.map((policy) => (
             <article
               key={policy.id}
-              className="border border-[#2B3138] bg-[#1D2126] p-5 flex flex-col justify-between"
+              style={{
+                backgroundColor: theme.bgSurface,
+                borderColor: theme.border,
+              }}
+              className="border p-5 flex flex-col justify-between"
             >
               <div>
-                <div className="text-[10px] font-mono-tech uppercase tracking-wider text-[#76808D]">
+                <div
+                  style={{ color: theme.textMuted }}
+                  className="text-[10px] font-mono-tech uppercase tracking-wider"
+                >
                   {policy.demoTag}
                 </div>
-                <h3 className="font-display text-base font-bold text-[#F2EFE9] mt-1.5">
+                <h3
+                  style={{ color: theme.textPrimary }}
+                  className="font-display text-base font-bold mt-1.5"
+                >
                   {policy.title}
                 </h3>
-                <p className="mt-2.5 text-xs text-[#A7B0BC] leading-relaxed">
+                <p
+                  style={{ color: theme.textSecondary }}
+                  className="mt-2.5 text-xs leading-relaxed"
+                >
                   {policy.summary}
                 </p>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-[#262C34]">
+              <div style={{ borderColor: theme.border }} className="mt-5 pt-3 border-t">
                 <button
                   type="button"
                   onClick={() => onOpenPolicy(policy)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[#22D3EE] hover:underline underline-offset-4 cursor-pointer"
+                  style={{ color: infoColor }}
+                  className="inline-flex items-center gap-1 text-xs font-medium hover:underline underline-offset-4 cursor-pointer"
                 >
                   <span>Read policy</span>
                   <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />

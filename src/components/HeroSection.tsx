@@ -1,90 +1,294 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
-import { clientConfig } from '../data/clientConfig';
+import { ArrowRight, Zap } from 'lucide-react';
+import type { StorefrontConfig } from '../data/storefronts';
 import type { VehicleSelection } from '../types/quote';
 import { FitmentFinder } from './FitmentFinder';
-import { CategoryShowcase } from './CategoryShowcase';
+import { NeedAdviceCard, TrustPillarsStrip } from './CategoryShowcase';
 
 interface HeroSectionProps {
+  storefront: StorefrontConfig;
   onOpenDrawer: () => void;
   onAttachVehicle: (vehicle: VehicleSelection) => void;
   onAddProduct: (sku: string) => void;
-  onSelectCategory: (category: string) => void;
   attachedGroupCount: number;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
+  storefront,
   onOpenDrawer,
   onAttachVehicle,
   onAddProduct,
-  onSelectCategory,
   attachedGroupCount,
 }) => {
+  const { theme } = storefront;
+  const kickerColor = theme.isLight
+    ? theme.accentPrimary
+    : storefront.id === 'astrateq'
+    ? theme.accentInfo
+    : theme.accentPrimary;
+
   return (
-    <section id="top" className="relative border-b border-[#2B3138] bg-[#171A1D] overflow-hidden">
-      {/* Full-bleed twilight highway hero backdrop matching Mockup 1 */}
-      <div className="relative">
-        <div className="absolute inset-0 pointer-events-none">
-          <img
-            src={clientConfig.brand.heroImageUrl}
-            alt="Commercial fleet truck and SUV driving on twilight city highway"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover object-center"
-          />
-          {/* Left dark asphalt scrim for crisp text legibility while keeping the right truck & skyline vibrant */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#11151B]/95 via-[#141920]/70 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#171A1D] via-[#171A1D]/35 to-[#0F1318]/40" />
+    <div id="top">
+      {/* Main Hero Canvas */}
+      <section
+        style={{
+          backgroundColor: theme.bgCanvas,
+          borderColor: theme.border,
+        }}
+        className="relative border-b overflow-hidden"
+      >
+        <div className="relative">
+          <div className="absolute inset-0 pointer-events-none">
+            <img
+              src={storefront.heroImageUrl}
+              alt={storefront.heroImageAlt}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover object-center"
+            />
+            <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
+            {!theme.isLight && (
+              <div
+                style={{
+                  background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 45%)`,
+                }}
+                className="absolute inset-0"
+              />
+            )}
+          </div>
+
+          <div className="relative mx-auto max-w-[1360px] px-4 sm:px-6 py-12 lg:py-16">
+            {/* LAYOUT 1: Astrateq Flagship — Headline Left + Docked Vehicle Fitment Finder Right */}
+            {storefront.heroLayout === 'docked-right-finder' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+                <div className="lg:col-span-6">
+                  <p
+                    style={{ color: kickerColor }}
+                    className="text-[11px] font-mono-tech uppercase tracking-[0.18em] mb-3"
+                  >
+                    {storefront.tagline}
+                  </p>
+                  <h1
+                    style={{ color: theme.textPrimary }}
+                    className="font-display text-4xl sm:text-5xl lg:text-[52px] font-bold tracking-tight leading-[1.06] max-w-xl [text-wrap:balance]"
+                  >
+                    {storefront.heroHeadlinePrefix}
+                  </h1>
+                  <p
+                    style={{ color: theme.textSecondary }}
+                    className="mt-4 text-sm sm:text-base leading-relaxed max-w-md"
+                  >
+                    {storefront.heroSubtitle}
+                  </p>
+
+                  <div className="mt-7 flex flex-wrap items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={onOpenDrawer}
+                      style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                      className="inline-flex items-center gap-2 rounded-xs px-6 py-3 text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.primaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+
+                    <a
+                      href="#hardware"
+                      style={{
+                        borderColor: theme.borderStrong,
+                        backgroundColor: 'rgba(16, 21, 28, 0.72)',
+                        color: theme.textPrimary,
+                      }}
+                      className="inline-flex items-center rounded-xs border px-5 py-3 text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0"
+                    >
+                      {storefront.secondaryCtaLabel}
+                    </a>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-6">
+                  <FitmentFinder
+                    theme={theme}
+                    layout="docked-vertical"
+                    onAttachVehicle={onAttachVehicle}
+                    onAddProduct={onAddProduct}
+                    attachedGroupCount={attachedGroupCount}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* LAYOUTS 2, 3, 4: Left-Anchored Hero Copy over Full-Width Backdrop */
+              <div className="max-w-xl py-4 lg:py-8">
+                <p
+                  style={{ color: kickerColor }}
+                  className="text-[11px] font-mono-tech uppercase tracking-[0.18em] mb-3 font-semibold"
+                >
+                  {storefront.tagline}
+                </p>
+                <h1
+                  style={{ color: theme.textPrimary }}
+                  className="font-display text-4xl sm:text-5xl lg:text-[52px] font-bold tracking-tight leading-[1.06] [text-wrap:balance]"
+                >
+                  {storefront.heroHeadlinePrefix}
+                  {storefront.heroHeadlineHighlight && (
+                    <>
+                      {' '}
+                      <span style={{ color: theme.accentPrimary }}>
+                        {storefront.heroHeadlineHighlight}
+                      </span>
+                    </>
+                  )}
+                </h1>
+                <p
+                  style={{ color: theme.textSecondary }}
+                  className="mt-4 text-sm sm:text-base leading-relaxed max-w-md"
+                >
+                  {storefront.heroSubtitle}
+                </p>
+
+                <div className="mt-7 flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={onOpenDrawer}
+                    style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                    className="inline-flex items-center gap-2 rounded-xs px-6 py-3 text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    <span>{storefront.primaryCtaLabel}</span>
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </button>
+
+                  <a
+                    href="#hardware"
+                    style={{
+                      borderColor: theme.borderStrong,
+                      backgroundColor: theme.isLight ? 'rgba(255,255,255,0.85)' : 'rgba(20,23,27,0.75)',
+                      color: theme.textPrimary,
+                    }}
+                    className="inline-flex items-center rounded-xs border px-5 py-3 text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap shrink-0"
+                  >
+                    {storefront.secondaryCtaLabel}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+      </section>
 
-        <div className="relative mx-auto max-w-[1360px] px-6 pt-12 pb-10 lg:pt-16 lg:pb-12">
-          {/* Top Hero Copy (Left-anchored like Mockup 1) */}
-          <div className="max-w-xl">
-            <p className="text-[11px] font-mono-tech uppercase tracking-[0.18em] text-[#22D3EE] mb-3">
-              {clientConfig.brand.tagline}
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-[52px] font-bold tracking-tight text-[#F2EFE9] leading-[1.06] [text-wrap:balance]">
-              Smarter Technology for Every Fleet.
-            </h1>
-            <p className="mt-4 text-sm sm:text-base text-[#C8D0DA] leading-relaxed max-w-md">
-              Advanced dashcams, telematics gateways, ADAS retrofits, and EV depot controls for
-              modern commercial fleets—priced in CAD tiers.
-            </p>
+      {/* Post-Hero Band Tailored per Storefront */}
+      {storefront.heroLayout === 'docked-right-finder' && (
+        <div style={{ backgroundColor: theme.bgCanvas, borderColor: theme.border }} className="border-b">
+          <TrustPillarsStrip storefront={storefront} />
+        </div>
+      )}
 
-            {/* ONE amber primary CTA + secondary text link */}
-            <div className="mt-7 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={onOpenDrawer}
-                className="inline-flex items-center gap-2 rounded-xs bg-[#F59E0B] px-6 py-3 text-xs sm:text-sm font-semibold text-[#111417] hover:bg-[#FBBF24] transition-colors cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171A1D]"
-              >
-                <span>Build fleet quote</span>
-                <ArrowRight className="w-4 h-4" aria-hidden="true" />
-              </button>
+      {storefront.heroLayout === 'corporate-quick-quote' && (
+        <div style={{ backgroundColor: theme.bgCanvas, borderColor: theme.border }} className="border-b">
+          {/* Quick Quote Engine 3-step horizontal bar matching NorthLink Panel 2 */}
+          <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pt-6 pb-2">
+            <div
+              style={{
+                backgroundColor: theme.bgSurface,
+                borderColor: theme.border,
+              }}
+              className="border shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+            >
+              <div className="flex items-center gap-3.5">
+                <div
+                  style={{
+                    backgroundColor: `${theme.accentPrimary}18`,
+                    color: theme.accentPrimary,
+                  }}
+                  className="w-10 h-10 rounded-xs flex items-center justify-center shrink-0"
+                >
+                  <Zap className="w-5 h-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 style={{ color: theme.textPrimary }} className="font-display text-base font-bold">
+                    Quick Quote Engine
+                  </h2>
+                  <p style={{ color: theme.textSecondary }} className="text-xs">
+                    Assemble a multi-vehicle CAD fleet RFQ in three structured steps.
+                  </p>
+                </div>
+              </div>
 
-              <a
-                href="#hardware"
-                className="inline-flex items-center rounded-xs border border-[#3E4856] bg-[#141920]/75 px-5 py-3 text-xs sm:text-sm font-medium text-[#F2EFE9] hover:border-[#22D3EE] hover:text-[#22D3EE] transition-colors whitespace-nowrap shrink-0"
-              >
-                Browse hardware specs
-              </a>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 max-w-2xl">
+                {[
+                  { num: '1', label: 'Deployment & Fitment' },
+                  { num: '2', label: 'Contact Details' },
+                  { num: '3', label: 'Review & Submit' },
+                ].map((s) => (
+                  <button
+                    key={s.num}
+                    type="button"
+                    onClick={onOpenDrawer}
+                    className="flex items-center gap-2.5 text-left group cursor-pointer"
+                  >
+                    <span
+                      style={{ backgroundColor: theme.accentPrimary, color: '#FFFFFF' }}
+                      className="w-6 h-6 rounded-full text-xs font-mono-tech font-bold flex items-center justify-center shrink-0"
+                    >
+                      {s.num}
+                    </span>
+                    <span
+                      style={{ color: theme.textPrimary }}
+                      className="text-xs font-semibold group-hover:underline"
+                    >
+                      {s.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Horizontal 01 Vehicle Fitment Finder Bar anchored below Hero copy */}
-          <div className="mt-10 lg:mt-12">
+          <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-6">
             <FitmentFinder
+              theme={theme}
+              layout="horizontal-bar"
               onAttachVehicle={onAttachVehicle}
               onAddProduct={onAddProduct}
               attachedGroupCount={attachedGroupCount}
             />
           </div>
+          <TrustPillarsStrip storefront={storefront} />
+        </div>
+      )}
 
-          {/* 5-Card Category Strip sitting seamlessly below Fitment Finder (matching Mockup 1) */}
-          <div className="mt-6">
-            <CategoryShowcase onSelectCategory={onSelectCategory} />
+      {storefront.heroLayout === 'ev-split-finder' && (
+        <div style={{ backgroundColor: theme.bgCanvas, borderColor: theme.border }} className="border-b">
+          <TrustPillarsStrip storefront={storefront} />
+          <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pb-8 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            <div className="lg:col-span-8">
+              <FitmentFinder
+                theme={theme}
+                layout="horizontal-bar"
+                onAttachVehicle={onAttachVehicle}
+                onAddProduct={onAddProduct}
+                attachedGroupCount={attachedGroupCount}
+              />
+            </div>
+            <div className="lg:col-span-4">
+              <NeedAdviceCard storefront={storefront} />
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      )}
+
+      {storefront.heroLayout === 'upfitter-pillars' && (
+        <div style={{ backgroundColor: theme.bgCanvas, borderColor: theme.border }} className="border-b pb-8">
+          <TrustPillarsStrip storefront={storefront} overlapping />
+          <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pt-6">
+            <FitmentFinder
+              theme={theme}
+              layout="horizontal-bar"
+              onAttachVehicle={onAttachVehicle}
+              onAddProduct={onAddProduct}
+              attachedGroupCount={attachedGroupCount}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

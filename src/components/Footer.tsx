@@ -1,44 +1,58 @@
 import React from 'react';
-import { clientConfig } from '../data/clientConfig';
-import { BrandMark } from './BlueprintArtwork';
+import type { StorefrontConfig } from '../data/storefronts';
+import { StorefrontLogo } from './BlueprintArtwork';
 
 interface FooterProps {
+  storefront: StorefrontConfig;
   onOpenDrawer: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenDrawer }) => {
+export const Footer: React.FC<FooterProps> = ({ storefront, onOpenDrawer }) => {
+  const { theme } = storefront;
+
   return (
-    <footer className="bg-[#171A1D] border-t border-[#2B3138]">
-      <div className="mx-auto max-w-[1320px] px-6 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+    <footer
+      style={{
+        backgroundColor: theme.bgCanvas,
+        borderColor: theme.border,
+      }}
+      className="border-t"
+    >
+      <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-3">
-          <BrandMark className="w-6 h-6" />
+          <StorefrontLogo storefront={storefront} />
           <div>
-            <div className="font-display text-sm font-bold uppercase tracking-wider text-[#F2EFE9]">
-              {clientConfig.brand.name}
+            <div
+              style={{ color: theme.textPrimary }}
+              className="font-display text-sm font-bold uppercase tracking-wider"
+            >
+              {storefront.brandName}
             </div>
-            <div className="text-xs text-[#76808D] mt-0.5">
-              {clientConfig.brand.copyright}
+            <div style={{ color: theme.textMuted }} className="text-xs mt-0.5">
+              © 2026 {storefront.brandName}. Demo storefront — sample catalog &amp; fitment data.
             </div>
           </div>
         </div>
 
         <nav
           aria-label="Footer navigation"
-          className="flex flex-wrap items-center gap-6 text-xs font-medium text-[#A7B0BC]"
+          style={{ color: theme.textSecondary }}
+          className="flex flex-wrap items-center gap-6 text-xs font-medium"
         >
-          <a href="#hardware" className="hover:text-[#F2EFE9] transition-colors">
+          <a href="#hardware" className="hover:opacity-100 opacity-85 transition-opacity">
             Hardware
           </a>
-          <a href="#fitment" className="hover:text-[#F2EFE9] transition-colors">
+          <a href="#fitment" className="hover:opacity-100 opacity-85 transition-opacity">
             Fitment
           </a>
-          <a href="#spec-assist" className="hover:text-[#F2EFE9] transition-colors">
+          <a href="#spec-assist" className="hover:opacity-100 opacity-85 transition-opacity">
             Spec assist
           </a>
           <button
             type="button"
             onClick={onOpenDrawer}
-            className="hover:text-[#F59E0B] transition-colors cursor-pointer"
+            style={{ color: theme.accentPrimary }}
+            className="font-semibold hover:underline underline-offset-4 cursor-pointer"
           >
             Contact fleet team
           </button>

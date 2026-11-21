@@ -23,6 +23,7 @@ import {
   getTierForQuantity,
 } from '../data/clientConfig';
 import type { PolicyItem } from '../data/clientConfig';
+import type { StorefrontConfig } from '../data/storefronts';
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -34,6 +35,7 @@ import type {
 } from '../types/quote';
 
 interface QuoteDrawerProps {
+  storefront: StorefrontConfig;
   isOpen: boolean;
   onClose: () => void;
   quoteState: PersistedQuoteState;
@@ -53,6 +55,7 @@ interface QuoteDrawerProps {
 }
 
 export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
+  storefront,
   isOpen,
   onClose,
   quoteState,
@@ -82,6 +85,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const [copiedPayload, setCopiedPayload] = useState(false);
 
   if (!isOpen) return null;
+
+  const { theme } = storefront;
+  const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
 
   const {
     lineItems,
@@ -224,7 +230,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       idempotencyKey: quoteId,
       createdAt: new Date().toISOString(),
       currency: clientConfig.currency,
-      brand: clientConfig.brand.name,
+      storefrontId: storefront.id,
+      brand: storefront.brandName,
       hardwareLines: computedLines,
       installationCoordinationRequested: installationRequested,
       vehicleGroups: computedGroups,
@@ -286,6 +293,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       return product ? getTierForQuantity(product, item.quantity).unitPrice === null : false;
     });
 
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: theme.bgInput,
+    borderColor: theme.borderStrong,
+    color: theme.textPrimary,
+  };
+
   return (
     <div
       className="fixed inset-0 z-40 flex justify-end bg-black/75"
@@ -294,17 +307,31 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       aria-label="Fleet Quote Drawer"
       data-testid="quote-drawer"
     >
-      <div className="relative w-full max-w-2xl bg-[#171A1D] border-l border-[#343C46] text-[#F2EFE9] flex flex-col h-full shadow-2xl">
+      <div
+        style={{
+          backgroundColor: theme.bgCanvas,
+          borderColor: theme.borderStrong,
+          color: theme.textPrimary,
+        }}
+        className="relative w-full max-w-2xl border-l flex flex-col h-full shadow-2xl"
+      >
         {/* Drawer Header */}
-        <div className="border-b border-[#2B3138] bg-[#1D2126] px-6 py-4 flex items-center justify-between gap-4">
+        <div
+          style={{
+            backgroundColor: theme.bgSurface,
+            borderColor: theme.border,
+          }}
+          className="border-b px-6 py-4 flex items-center justify-between gap-4"
+        >
           <div>
             <div
               data-testid="drawer-step-indicator"
-              className="text-[11px] font-mono-tech uppercase tracking-[0.16em] text-[#22D3EE]"
+              style={{ color: infoColor }}
+              className="text-[11px] font-mono-tech uppercase tracking-[0.16em]"
             >
               {submittedRecord ? 'RFQ RECORDED' : stepLabels[currentStep]}
             </div>
-            <h2 className="font-display text-lg font-bold text-[#F2EFE9] mt-0.5">
+            <h2 className="font-display text-lg font-bold mt-0.5">
               {submittedRecord ? 'Fleet Quote Reference' : stepTitles[currentStep]}
             </h2>
           </div>
@@ -313,7 +340,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close quote drawer"
-            className="p-2 text-[#A7B0BC] hover:text-[#F2EFE9] border border-transparent hover:border-[#343C46] cursor-pointer"
+            style={{ color: theme.textSecondary }}
+            className="p-2 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -321,7 +349,13 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
         {/* Consistent 3-Step Navigation Strip */}
         {!submittedRecord && (
-          <div className="grid grid-cols-3 border-b border-[#2B3138] bg-[#14171A] text-[11px] font-mono-tech">
+          <div
+            style={{
+              backgroundColor: theme.bgElevated,
+              borderColor: theme.border,
+            }}
+            className="grid grid-cols-3 border-b text-[11px] font-mono-tech"
+          >
             {([1, 2, 3] as const).map((stepNum) => {
               const isActive = currentStep === stepNum;
               const isPast = currentStep > stepNum;
@@ -335,12 +369,13 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     }
                   }}
                   disabled={stepNum > currentStep}
-                  className={`px-3 py-2.5 text-left border-r last:border-r-0 border-[#2B3138] transition-colors ${
-                    isActive
-                      ? 'bg-[#1D2126] text-[#22D3EE] font-semibold'
-                      : isPast
-                      ? 'text-[#F2EFE9] hover:bg-[#1D2126]/60 cursor-pointer'
-                      : 'text-[#76808D] cursor-not-allowed'
+                  style={{
+                    backgroundColor: isActive ? theme.bgSurface : 'transparent',
+                    color: isActive ? infoColor : isPast ? theme.textPrimary : theme.textMuted,
+                    borderColor: theme.border,
+                  }}
+                  className={`px-3 py-2.5 text-left border-r last:border-r-0 transition-colors ${
+                    isPast ? 'cursor-pointer' : isActive ? 'font-semibold' : 'cursor-not-allowed'
                   }`}
                 >
                   <div>{stepLabels[stepNum]}</div>
@@ -353,11 +388,19 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
         {/* Drawer Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* SUBMITTED CONFIRMATION STATE */}
           {submittedRecord ? (
             <div className="space-y-5" data-testid="rfq-confirmation">
-              <div className="border border-[#22D3EE]/50 bg-[#1D2126] p-5 space-y-3">
-                <div className="flex items-center gap-2 text-[#22D3EE] text-xs font-mono-tech uppercase tracking-wider">
+              <div
+                style={{
+                  backgroundColor: theme.bgSurface,
+                  borderColor: theme.badgeVerifiedBorder,
+                }}
+                className="border p-5 space-y-3"
+              >
+                <div
+                  style={{ color: infoColor }}
+                  className="flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider"
+                >
                   <FileCheck2 className="w-4 h-4" aria-hidden="true" />
                   <span>
                     {submittedRecord.mode === 'webhook'
@@ -366,31 +409,42 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   </span>
                 </div>
 
-                <h3 className="font-display text-xl font-bold text-[#F2EFE9]">
+                <h3 className="font-display text-xl font-bold">
                   Quote ID: <span className="font-mono-tech">{submittedRecord.quoteId}</span>
                 </h3>
 
                 {submittedRecord.mode === 'local-demo' ? (
-                  <p className="text-sm text-[#A7B0BC] leading-relaxed">
-                    No external webhook URL is configured in <code className="font-mono-tech text-[#F2EFE9]">clientConfig</code>.
-                    Your RFQ request was recorded locally in browser storage for demo purposes
-                    only—it has not been transmitted to an external CRM or server.
+                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
+                    No external webhook URL is configured in{' '}
+                    <code className="font-mono-tech">clientConfig</code>. Your RFQ request was
+                    recorded locally in browser storage for demo purposes only—it has not been
+                    transmitted to an external CRM or server.
                   </p>
                 ) : (
-                  <p className="text-sm text-[#A7B0BC] leading-relaxed">
+                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
                     JSON RFQ payload delivered to the configured webhook endpoint with
-                    idempotencyKey <code className="font-mono-tech text-[#F2EFE9]">{submittedRecord.idempotencyKey}</code>.
+                    idempotencyKey{' '}
+                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
                   </p>
                 )}
 
-                <div className="text-xs font-mono-tech text-[#76808D]">
+                <div style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
                   Recorded at: {new Date(submittedRecord.submittedAt).toLocaleString('en-CA')}
                 </div>
               </div>
 
-              <div className="border border-[#2B3138] bg-[#14171A] p-4 space-y-3">
+              <div
+                style={{
+                  backgroundColor: theme.bgSurface,
+                  borderColor: theme.border,
+                }}
+                className="border p-4 space-y-3"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono-tech uppercase tracking-wider text-[#A7B0BC]">
+                  <span
+                    style={{ color: theme.textSecondary }}
+                    className="text-xs font-mono-tech uppercase tracking-wider"
+                  >
                     RFQ JSON Payload (Idempotency Key: {submittedRecord.idempotencyKey})
                   </span>
                   <button
@@ -402,7 +456,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       setCopiedPayload(true);
                       setTimeout(() => setCopiedPayload(false), 2000);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono-tech text-[#22D3EE] hover:underline cursor-pointer"
+                    style={{ color: infoColor }}
+                    className="inline-flex items-center gap-1.5 text-xs font-mono-tech hover:underline cursor-pointer"
                   >
                     {copiedPayload ? (
                       <>
@@ -417,7 +472,14 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
                   </button>
                 </div>
-                <pre className="text-[11px] font-mono-tech text-[#A7B0BC] overflow-x-auto max-h-60 p-3 bg-[#171A1D] border border-[#262C34]">
+                <pre
+                  style={{
+                    backgroundColor: theme.bgInput,
+                    borderColor: theme.border,
+                    color: theme.textSecondary,
+                  }}
+                  className="text-[11px] font-mono-tech overflow-x-auto max-h-60 p-3 border"
+                >
                   {JSON.stringify(submittedRecord.payload, null, 2)}
                 </pre>
               </div>
@@ -426,14 +488,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 <button
                   type="button"
                   onClick={onResetQuote}
-                  className="rounded-xs border border-[#343C46] bg-[#1D2126] px-4 py-2.5 text-xs font-semibold text-[#F2EFE9] hover:border-[#22D3EE] cursor-pointer"
+                  style={{
+                    backgroundColor: theme.bgSurface,
+                    borderColor: theme.borderStrong,
+                    color: theme.textPrimary,
+                  }}
+                  className="rounded-xs border px-4 py-2.5 text-xs font-semibold cursor-pointer"
                 >
                   Start new fleet quote
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xs bg-[#F59E0B] px-5 py-2.5 text-xs font-semibold text-[#111417] hover:bg-[#FBBF24] cursor-pointer"
+                  style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                  className="rounded-xs px-5 py-2.5 text-xs font-semibold cursor-pointer"
                 >
                   Return to showroom
                 </button>
@@ -441,22 +509,31 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
             </div>
           ) : (
             <>
-              {/* ==================== STEP 01 OF 03: DEPLOYMENT ==================== */}
+              {/* STEP 01 OF 03: DEPLOYMENT */}
               {currentStep === 1 && (
                 <div className="space-y-8" data-testid="drawer-step-1">
-                  {/* A. Hardware Line Items */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                      <h3
+                        style={{ color: infoColor }}
+                        className="text-xs font-mono-tech uppercase tracking-wider"
+                      >
                         Hardware Line Items ({lineItems.length})
                       </h3>
-                      <span className="text-[11px] font-mono-tech text-[#76808D]">
+                      <span style={{ color: theme.textMuted }} className="text-[11px] font-mono-tech">
                         CAD tier pricing
                       </span>
                     </div>
 
                     {lineItems.length === 0 ? (
-                      <div className="border border-dashed border-[#343C46] bg-[#1D2126]/40 p-5 text-sm text-[#A7B0BC]">
+                      <div
+                        style={{
+                          backgroundColor: theme.bgSurface,
+                          borderColor: theme.borderStrong,
+                          color: theme.textSecondary,
+                        }}
+                        className="border border-dashed p-5 text-sm"
+                      >
                         No hardware SKUs added yet. Select items from the Hardware Catalog or add
                         optional wiring below.
                       </div>
@@ -476,14 +553,21 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                             <div
                               key={item.sku}
                               data-testid={`drawer-line-${item.sku}`}
-                              className="border border-[#2B3138] bg-[#1D2126] p-4 space-y-3"
+                              style={{
+                                backgroundColor: theme.bgSurface,
+                                borderColor: theme.border,
+                              }}
+                              className="border p-4 space-y-3"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div>
-                                  <div className="text-xs font-mono-tech text-[#22D3EE]">
+                                  <div
+                                    style={{ color: infoColor }}
+                                    className="text-xs font-mono-tech"
+                                  >
                                     {product.sku} · {activeTier.label}
                                   </div>
-                                  <div className="font-display text-sm font-bold text-[#F2EFE9] mt-0.5">
+                                  <div className="font-display text-sm font-bold mt-0.5">
                                     {product.name}
                                   </div>
                                 </div>
@@ -491,32 +575,43 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   type="button"
                                   onClick={() => onRemoveLineItem(item.sku)}
                                   aria-label={`Remove ${product.sku}`}
-                                  className="p-1.5 text-[#76808D] hover:text-[#F59E0B] cursor-pointer"
+                                  style={{ color: theme.textMuted }}
+                                  className="p-1.5 cursor-pointer hover:opacity-80"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
 
-                              {/* Tier Changed Notice */}
                               {item.lastTierChangedTo && (
                                 <div
                                   data-testid={`tier-changed-${item.sku}`}
-                                  className="text-[11px] font-mono-tech text-[#22D3EE] bg-[#22D3EE]/10 border border-[#22D3EE]/30 px-2.5 py-1 inline-block"
+                                  style={{
+                                    backgroundColor: theme.badgeVerifiedBg,
+                                    borderColor: theme.badgeVerifiedBorder,
+                                    color: theme.badgeVerifiedText,
+                                  }}
+                                  className="text-[11px] font-mono-tech border px-2.5 py-1 inline-block"
                                 >
                                   Tier changed: {item.lastTierChangedTo}
                                 </div>
                               )}
 
-                              {/* Stepper + Unit Price + Line Total */}
                               <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
-                                <div className="inline-flex items-center border border-[#343C46] bg-[#14171A]">
+                                <div
+                                  style={{
+                                    backgroundColor: theme.bgInput,
+                                    borderColor: theme.borderStrong,
+                                  }}
+                                  className="inline-flex items-center border"
+                                >
                                   <button
                                     type="button"
                                     onClick={() =>
                                       onUpdateQuantity(item.sku, Math.max(1, item.quantity - 1))
                                     }
                                     aria-label={`Decrease quantity of ${product.sku}`}
-                                    className="w-9 h-9 flex items-center justify-center text-[#A7B0BC] hover:text-[#F2EFE9] hover:bg-[#23282E] cursor-pointer"
+                                    style={{ color: theme.textSecondary }}
+                                    className="w-9 h-9 flex items-center justify-center cursor-pointer"
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
@@ -532,14 +627,19 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                         onUpdateQuantity(item.sku, parsed);
                                       }
                                     }}
-                                    className="w-16 h-9 bg-transparent text-center text-sm font-mono-tech text-[#F2EFE9] focus:outline-none border-x border-[#343C46]"
+                                    style={{
+                                      borderColor: theme.borderStrong,
+                                      color: theme.textPrimary,
+                                    }}
+                                    className="w-16 h-9 bg-transparent text-center text-sm font-mono-tech focus:outline-none border-x"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => onUpdateQuantity(item.sku, item.quantity + 1)}
                                     aria-label={`Increase quantity of ${product.sku}`}
                                     data-testid={`qty-inc-${item.sku}`}
-                                    className="w-9 h-9 flex items-center justify-center text-[#A7B0BC] hover:text-[#F2EFE9] hover:bg-[#23282E] cursor-pointer"
+                                    style={{ color: theme.textSecondary }}
+                                    className="w-9 h-9 flex items-center justify-center cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>
@@ -547,17 +647,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
                                 <div className="text-right font-mono-tech">
                                   {isFormalQuote ? (
-                                    <div className="text-xs text-[#F59E0B] font-semibold">
+                                    <div
+                                      style={{ color: theme.badgeWarnText }}
+                                      className="text-xs font-semibold"
+                                    >
                                       {activeTier.formalQuoteText}
                                     </div>
                                   ) : (
                                     <>
-                                      <div className="text-xs text-[#A7B0BC]">
+                                      <div style={{ color: theme.textSecondary }} className="text-xs">
                                         {formatCad(activeTier.unitPrice!)} / {product.unitLabel}
                                       </div>
                                       <div
                                         data-testid={`line-total-${item.sku}`}
-                                        className="text-sm font-bold text-[#F2EFE9] mt-0.5"
+                                        className="text-sm font-bold mt-0.5"
                                       >
                                         {formatCad(lineTotal!)}
                                       </div>
@@ -567,11 +670,19 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               </div>
 
                               {/* Fitment Badge PER attached vehicle group */}
-                              <div className="border-t border-[#262C34] pt-2.5 space-y-1.5">
+                              <div
+                                style={{ borderColor: theme.border }}
+                                className="border-t pt-2.5 space-y-1.5"
+                              >
                                 {vehicleGroups.length === 0 ? (
                                   <div
                                     data-testid={`line-fitment-unchecked-${item.sku}`}
-                                    className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/40 px-2.5 py-1"
+                                    style={{
+                                      backgroundColor: theme.badgeWarnBg,
+                                      borderColor: theme.badgeWarnBorder,
+                                      color: theme.badgeWarnText,
+                                    }}
+                                    className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech border px-2.5 py-1"
                                   >
                                     <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                                     <span>Fitment not checked — add your vehicle</span>
@@ -586,13 +697,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                     return (
                                       <div
                                         key={group.id}
-                                        className={`flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-tech px-2.5 py-1 border ${
-                                          isVerified
-                                            ? 'border-[#22D3EE]/40 bg-[#22D3EE]/10 text-[#22D3EE]'
-                                            : 'border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[#F59E0B]'
-                                        }`}
+                                        style={{
+                                          backgroundColor: isVerified
+                                            ? theme.badgeVerifiedBg
+                                            : theme.badgeWarnBg,
+                                          borderColor: isVerified
+                                            ? theme.badgeVerifiedBorder
+                                            : theme.badgeWarnBorder,
+                                          color: isVerified
+                                            ? theme.badgeVerifiedText
+                                            : theme.badgeWarnText,
+                                        }}
+                                        className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-tech px-2.5 py-1 border"
                                       >
-                                        <span className="text-[#F2EFE9]">
+                                        <span style={{ color: theme.textPrimary }}>
                                           {group.year} {group.make} {group.model}
                                         </span>
                                         <span className="inline-flex items-center gap-1 font-semibold">
@@ -615,19 +733,35 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* B. Optional Add-ons Area (Buyer-clicked only) */}
-                  <div className="border border-[#2B3138] bg-[#14171A] p-4 space-y-3">
-                    <div className="text-xs font-mono-tech uppercase tracking-wider text-[#A7B0BC]">
+                  {/* Optional Add-ons Area */}
+                  <div
+                    style={{
+                      backgroundColor: theme.bgElevated,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-3"
+                  >
+                    <div
+                      style={{ color: theme.textSecondary }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
                       Optional Add-ons (Buyer-Added Only)
                     </div>
 
                     {harnessProduct && (
-                      <div className="flex items-center justify-between gap-3 border border-[#262C34] bg-[#1D2126] p-3">
+                      <div
+                        style={{
+                          backgroundColor: theme.bgSurface,
+                          borderColor: theme.border,
+                        }}
+                        className="flex items-center justify-between gap-3 border p-3"
+                      >
                         <div>
-                          <div className="text-xs font-semibold text-[#F2EFE9]">
-                            {harnessProduct.name}
-                          </div>
-                          <div className="text-[11px] font-mono-tech text-[#A7B0BC] mt-0.5">
+                          <div className="text-xs font-semibold">{harnessProduct.name}</div>
+                          <div
+                            style={{ color: theme.textSecondary }}
+                            className="text-[11px] font-mono-tech mt-0.5"
+                          >
                             From {formatCad(getTier1Price(harnessProduct))} /{' '}
                             {harnessProduct.unitLabel} · {harnessProduct.specs.interface}
                           </div>
@@ -635,7 +769,11 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => onAddProduct(harnessProduct.sku)}
-                          className="inline-flex items-center gap-1 rounded-xs border border-[#F59E0B] px-3 py-1.5 text-xs font-semibold text-[#F59E0B] hover:bg-[#F59E0B] hover:text-[#111417] transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                          style={{
+                            borderColor: theme.ctaBg,
+                            color: theme.isLight ? theme.ctaBg : theme.accentPrimary,
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                           <span>{harnessInQuote ? 'Add another' : 'Add'}</span>
@@ -643,23 +781,37 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between gap-3 border border-[#262C34] bg-[#1D2126] p-3">
+                    <div
+                      style={{
+                        backgroundColor: theme.bgSurface,
+                        borderColor: theme.border,
+                      }}
+                      className="flex items-center justify-between gap-3 border p-3"
+                    >
                       <div>
-                        <div className="text-xs font-semibold text-[#F2EFE9]">
+                        <div className="text-xs font-semibold">
                           {clientConfig.deploymentOptions.installationAddon.label}
                         </div>
-                        <div className="text-[11px] text-[#A7B0BC] mt-0.5">
+                        <div style={{ color: theme.textSecondary }} className="text-[11px] mt-0.5">
                           {clientConfig.deploymentOptions.installationAddon.note}
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={onToggleInstallation}
-                        className={`inline-flex items-center gap-1 rounded-xs px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                        style={
                           installationRequested
-                            ? 'bg-[#22D3EE]/15 border border-[#22D3EE]/60 text-[#22D3EE]'
-                            : 'border border-[#F59E0B] text-[#F59E0B] hover:bg-[#F59E0B] hover:text-[#111417]'
-                        }`}
+                            ? {
+                                backgroundColor: theme.badgeVerifiedBg,
+                                borderColor: theme.badgeVerifiedBorder,
+                                color: theme.badgeVerifiedText,
+                              }
+                            : {
+                                borderColor: theme.ctaBg,
+                                color: theme.isLight ? theme.ctaBg : theme.accentPrimary,
+                              }
+                        }
+                        className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
                       >
                         {installationRequested ? (
                           <>
@@ -676,16 +828,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     </div>
                   </div>
 
-                  {/* C. Vehicle Groups */}
+                  {/* Vehicle Groups */}
                   <div>
                     <div className="flex items-center justify-between gap-3 mb-3">
-                      <h3 className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                      <h3
+                        style={{ color: infoColor }}
+                        className="text-xs font-mono-tech uppercase tracking-wider"
+                      >
                         Vehicle Groups ({vehicleGroups.length})
                       </h3>
                       <button
                         type="button"
                         onClick={() => setShowManualVehicleForm((v) => !v)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#22D3EE] hover:underline cursor-pointer"
+                        style={{ color: infoColor }}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>{showManualVehicleForm ? 'Cancel' : 'Add vehicle group manually'}</span>
@@ -695,9 +851,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     {showManualVehicleForm && (
                       <form
                         onSubmit={handleManualVehicleAdd}
-                        className="mb-4 border border-[#343C46] bg-[#14171A] p-4 space-y-3"
+                        style={{
+                          backgroundColor: theme.bgElevated,
+                          borderColor: theme.borderStrong,
+                        }}
+                        className="mb-4 border p-4 space-y-3"
                       >
-                        <div className="text-xs font-mono-tech uppercase text-[#A7B0BC]">
+                        <div
+                          style={{ color: theme.textSecondary }}
+                          className="text-xs font-mono-tech uppercase"
+                        >
                           Add Manual Vehicle Group
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -705,7 +868,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                             value={manualYear}
                             onChange={(e) => setManualYear(e.target.value)}
                             aria-label="Manual vehicle year"
-                            className="h-10 rounded-xs border border-[#343C46] bg-[#171A1D] px-2.5 text-xs text-[#F2EFE9]"
+                            style={inputStyle}
+                            className="h-10 rounded-xs border px-2.5 text-xs"
                           >
                             <option value="">Year</option>
                             {clientConfig.fitmentOptions.years.map((y) => (
@@ -721,7 +885,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               setManualModel('');
                             }}
                             aria-label="Manual vehicle make"
-                            className="h-10 rounded-xs border border-[#343C46] bg-[#171A1D] px-2.5 text-xs text-[#F2EFE9]"
+                            style={inputStyle}
+                            className="h-10 rounded-xs border px-2.5 text-xs"
                           >
                             <option value="">Make</option>
                             {clientConfig.fitmentOptions.makes.map((m) => (
@@ -734,7 +899,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                             value={manualModel}
                             onChange={(e) => setManualModel(e.target.value)}
                             aria-label="Manual vehicle model"
-                            className="h-10 rounded-xs border border-[#343C46] bg-[#171A1D] px-2.5 text-xs text-[#F2EFE9]"
+                            style={inputStyle}
+                            className="h-10 rounded-xs border px-2.5 text-xs"
                           >
                             <option value="">Model / chassis</option>
                             {manualModels.map((mod) => (
@@ -747,7 +913,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                             value={manualClass}
                             onChange={(e) => setManualClass(e.target.value)}
                             aria-label="Manual vehicle class"
-                            className="h-10 rounded-xs border border-[#343C46] bg-[#171A1D] px-2.5 text-xs text-[#F2EFE9]"
+                            style={inputStyle}
+                            className="h-10 rounded-xs border px-2.5 text-xs"
                           >
                             <option value="">Vehicle class</option>
                             {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
@@ -760,7 +927,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         <button
                           type="submit"
                           disabled={!manualYear || !manualMake || !manualModel || !manualClass}
-                          className="rounded-xs bg-[#F59E0B] px-4 py-2 text-xs font-semibold text-[#111417] disabled:bg-[#23282E] disabled:text-[#76808D] cursor-pointer"
+                          style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                          className="rounded-xs px-4 py-2 text-xs font-semibold disabled:opacity-40 cursor-pointer"
                         >
                           Add vehicle group
                         </button>
@@ -768,7 +936,14 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
 
                     {vehicleGroups.length === 0 ? (
-                      <div className="border border-dashed border-[#343C46] bg-[#1D2126]/40 p-4 text-xs text-[#A7B0BC]">
+                      <div
+                        style={{
+                          backgroundColor: theme.bgSurface,
+                          borderColor: theme.borderStrong,
+                          color: theme.textSecondary,
+                        }}
+                        className="border border-dashed p-4 text-xs"
+                      >
                         No vehicle groups attached yet. Use the Vehicle Fitment finder or click
                         &ldquo;Add vehicle group manually&rdquo; above.
                       </div>
@@ -781,16 +956,23 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                             <div
                               key={group.id}
                               data-testid={`vehicle-group-card-${idx}`}
-                              className="border border-[#2B3138] bg-[#1D2126] p-4 space-y-3"
+                              style={{
+                                backgroundColor: theme.bgSurface,
+                                borderColor: theme.border,
+                              }}
+                              className="border p-4 space-y-3"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-2">
-                                  <Car className="w-4 h-4 text-[#22D3EE]" aria-hidden="true" />
+                                  <Car style={{ color: infoColor }} className="w-4 h-4" aria-hidden="true" />
                                   <div>
-                                    <div className="text-sm font-semibold text-[#F2EFE9]">
+                                    <div className="text-sm font-semibold">
                                       {group.year} {group.make} {group.model}
                                     </div>
-                                    <div className="text-xs font-mono-tech text-[#76808D]">
+                                    <div
+                                      style={{ color: theme.textMuted }}
+                                      className="text-xs font-mono-tech"
+                                    >
                                       {group.vehicleClass} · Group {idx + 1}
                                     </div>
                                   </div>
@@ -799,20 +981,27 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   type="button"
                                   onClick={() => onRemoveVehicleGroup(group.id)}
                                   aria-label={`Remove vehicle group ${group.year} ${group.make} ${group.model}`}
-                                  className="p-1.5 text-[#76808D] hover:text-[#F59E0B] cursor-pointer"
+                                  style={{ color: theme.textMuted }}
+                                  className="p-1.5 cursor-pointer"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
 
-                              {/* Group Fitment Status */}
                               <div
                                 data-testid={`vehicle-group-status-${idx}`}
-                                className={`inline-flex items-center gap-1.5 text-xs font-mono-tech px-2.5 py-1 border ${
-                                  isVerified
-                                    ? 'border-[#22D3EE]/50 bg-[#22D3EE]/10 text-[#22D3EE]'
-                                    : 'border-[#F59E0B]/50 bg-[#F59E0B]/10 text-[#F59E0B]'
-                                }`}
+                                style={{
+                                  backgroundColor: isVerified
+                                    ? theme.badgeVerifiedBg
+                                    : theme.badgeWarnBg,
+                                  borderColor: isVerified
+                                    ? theme.badgeVerifiedBorder
+                                    : theme.badgeWarnBorder,
+                                  color: isVerified
+                                    ? theme.badgeVerifiedText
+                                    : theme.badgeWarnText,
+                                }}
+                                className="inline-flex items-center gap-1.5 text-xs font-mono-tech px-2.5 py-1 border"
                               >
                                 {isVerified ? (
                                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -826,7 +1015,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                 <div>
                                   <label
                                     htmlFor={`group-count-${group.id}`}
-                                    className="block text-[11px] font-mono-tech uppercase text-[#A7B0BC] mb-1"
+                                    style={{ color: theme.textSecondary }}
+                                    className="block text-[11px] font-mono-tech uppercase mb-1"
                                   >
                                     Number of vehicles
                                   </label>
@@ -841,14 +1031,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                         onUpdateVehicleGroup(group.id, { vehicleCount: val });
                                       }
                                     }}
-                                    className="w-full h-10 rounded-xs border border-[#343C46] bg-[#14171A] px-3 text-sm font-mono-tech text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                                    style={inputStyle}
+                                    className="w-full h-10 rounded-xs border px-3 text-sm font-mono-tech focus:outline-none"
                                   />
                                 </div>
 
                                 <div>
                                   <label
                                     htmlFor={`group-power-${group.id}`}
-                                    className="block text-[11px] font-mono-tech uppercase text-[#A7B0BC] mb-1"
+                                    style={{ color: theme.textSecondary }}
+                                    className="block text-[11px] font-mono-tech uppercase mb-1"
                                   >
                                     Vehicle power source *
                                   </label>
@@ -861,7 +1053,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                         powerSource: e.target.value as PowerSourceOption,
                                       })
                                     }
-                                    className="w-full h-10 rounded-xs border border-[#343C46] bg-[#14171A] px-3 text-sm text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                                    style={inputStyle}
+                                    className="w-full h-10 rounded-xs border px-3 text-sm focus:outline-none"
                                   >
                                     <option value="">Select power source...</option>
                                     {clientConfig.deploymentOptions.powerSources.map((opt) => (
@@ -879,9 +1072,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
                   </div>
 
-                  {/* D. Deployment Questions */}
-                  <div className="border-t border-[#2B3138] pt-5 space-y-4">
-                    <h3 className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                  {/* Deployment Questions */}
+                  <div style={{ borderColor: theme.border }} className="border-t pt-5 space-y-4">
+                    <h3
+                      style={{ color: infoColor }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
                       Deployment Parameters
                     </h3>
 
@@ -889,7 +1085,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <div>
                         <label
                           htmlFor="deploy-install"
-                          className="block text-[11px] font-mono-tech uppercase text-[#A7B0BC] mb-1"
+                          style={{ color: theme.textSecondary }}
+                          className="block text-[11px] font-mono-tech uppercase mb-1"
                         >
                           Installation preference
                         </label>
@@ -899,7 +1096,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           onChange={(e) =>
                             onUpdateDeployment({ installationPreference: e.target.value })
                           }
-                          className="w-full h-10 rounded-xs border border-[#343C46] bg-[#14171A] px-2.5 text-xs text-[#F2EFE9]"
+                          style={inputStyle}
+                          className="w-full h-10 rounded-xs border px-2.5 text-xs"
                         >
                           {clientConfig.deploymentOptions.installationPreferences.map((pref) => (
                             <option key={pref} value={pref}>
@@ -912,7 +1110,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <div>
                         <label
                           htmlFor="deploy-fleet-size"
-                          className="block text-[11px] font-mono-tech uppercase text-[#A7B0BC] mb-1"
+                          style={{ color: theme.textSecondary }}
+                          className="block text-[11px] font-mono-tech uppercase mb-1"
                         >
                           Fleet size
                         </label>
@@ -920,7 +1119,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           id="deploy-fleet-size"
                           value={deployment.fleetSize}
                           onChange={(e) => onUpdateDeployment({ fleetSize: e.target.value })}
-                          className="w-full h-10 rounded-xs border border-[#343C46] bg-[#14171A] px-2.5 text-xs text-[#F2EFE9]"
+                          style={inputStyle}
+                          className="w-full h-10 rounded-xs border px-2.5 text-xs"
                         >
                           {clientConfig.deploymentOptions.fleetSizes.map((band) => (
                             <option key={band} value={band}>
@@ -933,7 +1133,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <div>
                         <label
                           htmlFor="deploy-timeline"
-                          className="block text-[11px] font-mono-tech uppercase text-[#A7B0BC] mb-1"
+                          style={{ color: theme.textSecondary }}
+                          className="block text-[11px] font-mono-tech uppercase mb-1"
                         >
                           Rollout timeline
                         </label>
@@ -941,7 +1142,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           id="deploy-timeline"
                           value={deployment.rolloutTimeline}
                           onChange={(e) => onUpdateDeployment({ rolloutTimeline: e.target.value })}
-                          className="w-full h-10 rounded-xs border border-[#343C46] bg-[#14171A] px-2.5 text-xs text-[#F2EFE9]"
+                          style={inputStyle}
+                          className="w-full h-10 rounded-xs border px-2.5 text-xs"
                         >
                           {clientConfig.deploymentOptions.rolloutTimelines.map((tl) => (
                             <option key={tl} value={tl}>
@@ -956,7 +1158,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   {step1Error && (
                     <div
                       role="alert"
-                      className="border border-[#F59E0B]/60 bg-[#F59E0B]/10 p-3 text-xs text-[#F59E0B]"
+                      style={{
+                        backgroundColor: theme.badgeWarnBg,
+                        borderColor: theme.badgeWarnBorder,
+                        color: theme.badgeWarnText,
+                      }}
+                      className="border p-3 text-xs"
                     >
                       {step1Error}
                     </div>
@@ -964,7 +1171,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 </div>
               )}
 
-              {/* ==================== STEP 02 OF 03: CONTACT ==================== */}
+              {/* STEP 02 OF 03: CONTACT */}
               {currentStep === 2 && (
                 <form
                   id="step-2-contact-form"
@@ -972,7 +1179,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   className="space-y-5"
                   data-testid="drawer-step-2"
                 >
-                  <p className="text-sm text-[#A7B0BC]">
+                  <p style={{ color: theme.textSecondary }} className="text-sm">
                     Provide your fleet procurement contact details to assemble the formal RFQ
                     summary.
                   </p>
@@ -981,7 +1188,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     <div>
                       <label
                         htmlFor="contact-full-name"
-                        className="block text-xs font-mono-tech uppercase text-[#A7B0BC] mb-1.5"
+                        style={{ color: theme.textSecondary }}
+                        className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
                         Full name *
                       </label>
@@ -992,14 +1200,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         value={contact.fullName}
                         onChange={(e) => onUpdateContact({ fullName: e.target.value })}
                         placeholder="Jordan Alvarez"
-                        className="w-full h-11 rounded-xs border border-[#343C46] bg-[#14171A] px-3.5 text-sm text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                        style={inputStyle}
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
                       />
                     </div>
 
                     <div>
                       <label
                         htmlFor="contact-company"
-                        className="block text-xs font-mono-tech uppercase text-[#A7B0BC] mb-1.5"
+                        style={{ color: theme.textSecondary }}
+                        className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
                         Company name *
                       </label>
@@ -1010,14 +1220,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         value={contact.companyName}
                         onChange={(e) => onUpdateContact({ companyName: e.target.value })}
                         placeholder="Northern Corridor Logistics Ltd."
-                        className="w-full h-11 rounded-xs border border-[#343C46] bg-[#14171A] px-3.5 text-sm text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                        style={inputStyle}
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
                       />
                     </div>
 
                     <div>
                       <label
                         htmlFor="contact-email"
-                        className="block text-xs font-mono-tech uppercase text-[#A7B0BC] mb-1.5"
+                        style={{ color: theme.textSecondary }}
+                        className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
                         Work email *
                       </label>
@@ -1028,14 +1240,16 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         value={contact.workEmail}
                         onChange={(e) => onUpdateContact({ workEmail: e.target.value })}
                         placeholder="j.alvarez@corridorlogistics.ca"
-                        className="w-full h-11 rounded-xs border border-[#343C46] bg-[#14171A] px-3.5 text-sm text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                        style={inputStyle}
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
                       />
                     </div>
 
                     <div>
                       <label
                         htmlFor="contact-phone"
-                        className="block text-xs font-mono-tech uppercase text-[#A7B0BC] mb-1.5"
+                        style={{ color: theme.textSecondary }}
+                        className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
                         Phone *
                       </label>
@@ -1046,7 +1260,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         value={contact.phone}
                         onChange={(e) => onUpdateContact({ phone: e.target.value })}
                         placeholder="+1 (416) 555-0148"
-                        className="w-full h-11 rounded-xs border border-[#343C46] bg-[#14171A] px-3.5 text-sm text-[#F2EFE9] focus:border-[#22D3EE] focus:outline-none"
+                        style={inputStyle}
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1054,7 +1269,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   {step2Error && (
                     <div
                       role="alert"
-                      className="border border-[#F59E0B]/60 bg-[#F59E0B]/10 p-3 text-xs text-[#F59E0B]"
+                      style={{
+                        backgroundColor: theme.badgeWarnBg,
+                        borderColor: theme.badgeWarnBorder,
+                        color: theme.badgeWarnText,
+                      }}
+                      className="border p-3 text-xs"
                     >
                       {step2Error}
                     </div>
@@ -1062,19 +1282,30 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 </form>
               )}
 
-              {/* ==================== STEP 03 OF 03: REVIEW & SUBMIT ==================== */}
+              {/* STEP 03 OF 03: REVIEW & SUBMIT */}
               {currentStep === 3 && (
                 <div className="space-y-6" data-testid="drawer-step-3">
-                  {/* (01) Hardware Summary */}
-                  <div className="border border-[#2B3138] bg-[#1D2126] p-4 space-y-3">
-                    <div className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                  {/* (01) Hardware */}
+                  <div
+                    style={{
+                      backgroundColor: theme.bgSurface,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-3"
+                  >
+                    <div
+                      style={{ color: infoColor }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
                       (01) Hardware
                     </div>
 
                     {lineItems.length === 0 ? (
-                      <p className="text-xs text-[#A7B0BC]">No hardware line items selected.</p>
+                      <p style={{ color: theme.textSecondary }} className="text-xs">
+                        No hardware line items selected.
+                      </p>
                     ) : (
-                      <div className="divide-y divide-[#262C34]">
+                      <div className="divide-y" style={{ borderColor: theme.border }}>
                         {lineItems.map((item) => {
                           const product = getProductBySku(item.sku);
                           if (!product) return null;
@@ -1082,19 +1313,26 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           const total =
                             tier.unitPrice !== null ? tier.unitPrice * item.quantity : null;
                           return (
-                            <div key={item.sku} className="py-2.5 flex items-start justify-between gap-4 text-xs">
+                            <div
+                              key={item.sku}
+                              style={{ borderColor: theme.border }}
+                              className="py-2.5 flex items-start justify-between gap-4 text-xs"
+                            >
                               <div>
-                                <div className="font-semibold text-[#F2EFE9]">
+                                <div className="font-semibold">
                                   {product.sku} · {product.name}
                                 </div>
-                                <div className="font-mono-tech text-[#A7B0BC] mt-0.5">
+                                <div
+                                  style={{ color: theme.textSecondary }}
+                                  className="font-mono-tech mt-0.5"
+                                >
                                   Qty: {item.quantity} · Tier: {tier.label} ·{' '}
                                   {tier.unitPrice !== null
                                     ? `${formatCad(tier.unitPrice)} / ${product.unitLabel}`
                                     : tier.formalQuoteText}
                                 </div>
                               </div>
-                              <div className="font-mono-tech font-semibold text-[#F2EFE9] whitespace-nowrap">
+                              <div className="font-mono-tech font-semibold whitespace-nowrap">
                                 {total !== null ? formatCad(total) : 'Formal quote'}
                               </div>
                             </div>
@@ -1104,14 +1342,22 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     )}
 
                     {installationRequested && (
-                      <div className="border-t border-[#262C34] pt-2.5 text-xs text-[#22D3EE]">
+                      <div
+                        style={{ borderColor: theme.border, color: infoColor }}
+                        className="border-t pt-2.5 text-xs"
+                      >
                         + {clientConfig.deploymentOptions.installationAddon.label}
                       </div>
                     )}
 
-                    <div className="border-t border-[#262C34] pt-3 flex items-center justify-between text-sm font-mono-tech">
-                      <span className="text-[#A7B0BC]">Estimated Tiered Hardware Subtotal</span>
-                      <span className="font-bold text-[#F2EFE9]">
+                    <div
+                      style={{ borderColor: theme.border }}
+                      className="border-t pt-3 flex items-center justify-between text-sm font-mono-tech"
+                    >
+                      <span style={{ color: theme.textSecondary }}>
+                        Estimated Tiered Hardware Subtotal
+                      </span>
+                      <span className="font-bold">
                         {formatCad(pricedSubtotal)}
                         {hasFormalQuoteLine ? ' + formal quote items' : ''}
                       </span>
@@ -1119,13 +1365,22 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   </div>
 
                   {/* (02) Vehicle Groups & Deployment */}
-                  <div className="border border-[#2B3138] bg-[#1D2126] p-4 space-y-3">
-                    <div className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                  <div
+                    style={{
+                      backgroundColor: theme.bgSurface,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-3"
+                  >
+                    <div
+                      style={{ color: infoColor }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
                       (02) Vehicle Groups &amp; Deployment
                     </div>
 
                     {vehicleGroups.length === 0 ? (
-                      <p className="text-xs text-[#F59E0B]">
+                      <p style={{ color: theme.badgeWarnText }} className="text-xs">
                         No vehicle groups attached — fitment will be reviewed during intake.
                       </p>
                     ) : (
@@ -1136,23 +1391,37 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           return (
                             <div
                               key={group.id}
-                              className="border border-[#262C34] bg-[#171A1D] p-3 text-xs space-y-1.5"
+                              style={{
+                                backgroundColor: theme.bgCanvas,
+                                borderColor: theme.border,
+                              }}
+                              className="border p-3 text-xs space-y-1.5"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-[#F2EFE9]">
+                                <span className="font-semibold">
                                   {group.year} {group.make} {group.model} ({group.vehicleClass})
                                 </span>
-                                <span className="font-mono-tech text-[#A7B0BC]">
+                                <span
+                                  style={{ color: theme.textSecondary }}
+                                  className="font-mono-tech"
+                                >
                                   {group.vehicleCount} vehicle{group.vehicleCount === 1 ? '' : 's'}
                                 </span>
                               </div>
-                              <div className="font-mono-tech text-[#A7B0BC]">
-                                Power source: <span className="text-[#F2EFE9]">{group.powerSource}</span>
+                              <div
+                                style={{ color: theme.textSecondary }}
+                                className="font-mono-tech"
+                              >
+                                Power source:{' '}
+                                <span style={{ color: theme.textPrimary }}>{group.powerSource}</span>
                               </div>
                               <div
-                                className={`inline-flex items-center gap-1.5 font-mono-tech text-[11px] ${
-                                  isVerified ? 'text-[#22D3EE]' : 'text-[#F59E0B]'
-                                }`}
+                                style={{
+                                  color: isVerified
+                                    ? theme.badgeVerifiedText
+                                    : theme.badgeWarnText,
+                                }}
+                                className="inline-flex items-center gap-1.5 font-mono-tech text-[11px]"
                               >
                                 {isVerified ? (
                                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -1167,51 +1436,72 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-[#262C34] pt-3 text-xs">
+                    <div
+                      style={{ borderColor: theme.border }}
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t pt-3 text-xs"
+                    >
                       <div>
-                        <div className="text-[#76808D]">Installation preference</div>
-                        <div className="text-[#F2EFE9] mt-0.5">{deployment.installationPreference}</div>
+                        <div style={{ color: theme.textMuted }}>Installation preference</div>
+                        <div className="mt-0.5">{deployment.installationPreference}</div>
                       </div>
                       <div>
-                        <div className="text-[#76808D]">Fleet size</div>
-                        <div className="text-[#F2EFE9] mt-0.5">{deployment.fleetSize}</div>
+                        <div style={{ color: theme.textMuted }}>Fleet size</div>
+                        <div className="mt-0.5">{deployment.fleetSize}</div>
                       </div>
                       <div>
-                        <div className="text-[#76808D]">Rollout timeline</div>
-                        <div className="text-[#F2EFE9] mt-0.5">{deployment.rolloutTimeline}</div>
+                        <div style={{ color: theme.textMuted }}>Rollout timeline</div>
+                        <div className="mt-0.5">{deployment.rolloutTimeline}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* (03) Contact Details */}
-                  <div className="border border-[#2B3138] bg-[#1D2126] p-4 space-y-2">
-                    <div className="text-xs font-mono-tech uppercase tracking-wider text-[#22D3EE]">
+                  <div
+                    style={{
+                      backgroundColor: theme.bgSurface,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-2"
+                  >
+                    <div
+                      style={{ color: infoColor }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
                       (03) Contact Details
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <div>
-                        <span className="text-[#76808D]">Full name: </span>
-                        <span className="text-[#F2EFE9]">{contact.fullName}</span>
+                        <span style={{ color: theme.textMuted }}>Full name: </span>
+                        <span>{contact.fullName}</span>
                       </div>
                       <div>
-                        <span className="text-[#76808D]">Company: </span>
-                        <span className="text-[#F2EFE9]">{contact.companyName}</span>
+                        <span style={{ color: theme.textMuted }}>Company: </span>
+                        <span>{contact.companyName}</span>
                       </div>
                       <div>
-                        <span className="text-[#76808D]">Work email: </span>
-                        <span className="text-[#F2EFE9]">{contact.workEmail}</span>
+                        <span style={{ color: theme.textMuted }}>Work email: </span>
+                        <span>{contact.workEmail}</span>
                       </div>
                       <div>
-                        <span className="text-[#76808D]">Phone: </span>
-                        <span className="text-[#F2EFE9]">{contact.phone}</span>
+                        <span style={{ color: theme.textMuted }}>Phone: </span>
+                        <span>{contact.phone}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Policy Links */}
-                  <div className="border border-[#2B3138] bg-[#14171A] p-4 space-y-2">
-                    <div className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech uppercase tracking-wider text-[#A7B0BC]">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#22D3EE]" aria-hidden="true" />
+                  <div
+                    style={{
+                      backgroundColor: theme.bgElevated,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-2"
+                  >
+                    <div
+                      style={{ color: theme.textSecondary }}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech uppercase tracking-wider"
+                    >
+                      <ShieldCheck style={{ color: infoColor }} className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>Buyer Policies (Sample Demo Terms)</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
@@ -1220,7 +1510,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           key={pol.id}
                           type="button"
                           onClick={() => onOpenPolicy(pol)}
-                          className="text-[#22D3EE] hover:underline underline-offset-4 cursor-pointer"
+                          style={{ color: infoColor }}
+                          className="hover:underline underline-offset-4 cursor-pointer"
                         >
                           {pol.title}
                         </button>
@@ -1231,7 +1522,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   {submitError && (
                     <div
                       role="alert"
-                      className="border border-[#F59E0B]/60 bg-[#F59E0B]/10 p-3 text-xs text-[#F59E0B]"
+                      style={{
+                        backgroundColor: theme.badgeWarnBg,
+                        borderColor: theme.badgeWarnBorder,
+                        color: theme.badgeWarnText,
+                      }}
+                      className="border p-3 text-xs"
                     >
                       {submitError}
                     </div>
@@ -1244,13 +1540,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
         {/* Drawer Footer Controls */}
         {!submittedRecord && (
-          <div className="border-t border-[#2B3138] bg-[#1D2126] px-6 py-4 flex items-center justify-between gap-3">
+          <div
+            style={{
+              backgroundColor: theme.bgSurface,
+              borderColor: theme.border,
+            }}
+            className="border-t px-6 py-4 flex items-center justify-between gap-3"
+          >
             {currentStep === 1 && (
               <>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="text-xs font-medium text-[#A7B0BC] hover:text-[#F2EFE9] cursor-pointer"
+                  style={{ color: theme.textSecondary }}
+                  className="text-xs font-medium cursor-pointer"
                 >
                   Continue browsing
                 </button>
@@ -1258,7 +1561,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   type="button"
                   onClick={handleStep1Continue}
                   data-testid="step1-continue-btn"
-                  className="inline-flex items-center gap-2 rounded-xs bg-[#F59E0B] px-5 py-2.5 text-xs font-semibold text-[#111417] hover:bg-[#FBBF24] transition-colors cursor-pointer"
+                  style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                  className="inline-flex items-center gap-2 rounded-xs px-5 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   <span>Continue to Contact</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -1271,7 +1575,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetStep(1)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A7B0BC] hover:text-[#F2EFE9] cursor-pointer"
+                  style={{ color: theme.textSecondary }}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                   <span>Back to Deployment</span>
@@ -1280,7 +1585,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   type="submit"
                   form="step-2-contact-form"
                   data-testid="step2-continue-btn"
-                  className="inline-flex items-center gap-2 rounded-xs bg-[#F59E0B] px-5 py-2.5 text-xs font-semibold text-[#111417] hover:bg-[#FBBF24] transition-colors cursor-pointer"
+                  style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                  className="inline-flex items-center gap-2 rounded-xs px-5 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   <span>Review RFQ</span>
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
@@ -1293,7 +1599,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetStep(2)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A7B0BC] hover:text-[#F2EFE9] cursor-pointer"
+                  style={{ color: theme.textSecondary }}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                   <span>Edit Contact</span>
@@ -1303,7 +1610,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   disabled={isSubmitting}
                   onClick={handleSubmitRfq}
                   data-testid="submit-rfq-btn"
-                  className="inline-flex items-center gap-2 rounded-xs bg-[#F59E0B] px-6 py-2.5 text-xs font-semibold text-[#111417] hover:bg-[#FBBF24] disabled:opacity-60 transition-colors cursor-pointer"
+                  style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                  className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer"
                 >
                   <span>{isSubmitting ? 'Submitting...' : 'Submit RFQ'}</span>
                 </button>

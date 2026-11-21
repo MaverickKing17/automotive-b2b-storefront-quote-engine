@@ -6,10 +6,12 @@ import {
   getTier1Price,
   type CatalogProduct,
 } from '../data/clientConfig';
+import type { StorefrontTheme } from '../data/storefronts';
 import type { QuoteLineItem } from '../types/quote';
 import { ProductSchematic } from './BlueprintArtwork';
 
 interface HardwareCatalogProps {
+  theme: StorefrontTheme;
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
   searchQuery: string;
@@ -19,7 +21,10 @@ interface HardwareCatalogProps {
   onViewSpecs: (product: CatalogProduct) => void;
 }
 
-const ProductCardMedia: React.FC<{ product: CatalogProduct }> = ({ product }) => {
+const ProductCardMedia: React.FC<{
+  product: CatalogProduct;
+  theme: StorefrontTheme;
+}> = ({ product, theme }) => {
   const [imgFailed, setImgFailed] = useState(false);
 
   if (imgFailed || !product.imageUrl) {
@@ -27,7 +32,10 @@ const ProductCardMedia: React.FC<{ product: CatalogProduct }> = ({ product }) =>
   }
 
   return (
-    <div className="relative aspect-[4/3] w-full bg-[#121519] border-b border-[#262C34] overflow-hidden">
+    <div
+      style={{ borderColor: theme.border }}
+      className="relative aspect-[4/3] w-full bg-[#121519] border-b overflow-hidden"
+    >
       <img
         src={product.imageUrl}
         alt={product.name}
@@ -35,8 +43,14 @@ const ProductCardMedia: React.FC<{ product: CatalogProduct }> = ({ product }) =>
         onError={() => setImgFailed(true)}
         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#1D2126]/65 via-transparent to-transparent pointer-events-none" />
-      <span className="absolute top-3 left-3 text-[10px] font-mono-tech tracking-wider text-[#F2EFE9] bg-[#14171A]/85 border border-[#2B3138] px-2 py-0.5">
+      <span
+        style={{
+          backgroundColor: theme.isLight ? 'rgba(255,255,255,0.92)' : 'rgba(20,23,26,0.88)',
+          borderColor: theme.border,
+          color: theme.textPrimary,
+        }}
+        className="absolute top-3 left-3 text-[10px] font-mono-tech tracking-wider border px-2 py-0.5"
+      >
         {product.sku}
       </span>
     </div>
@@ -44,6 +58,7 @@ const ProductCardMedia: React.FC<{ product: CatalogProduct }> = ({ product }) =>
 };
 
 export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
+  theme,
   selectedCategory,
   onSelectCategory,
   searchQuery,
@@ -79,21 +94,34 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
     lineItems.find((item) => item.sku === sku)?.quantity ?? 0;
 
   return (
-    <section id="hardware" className="border-b border-[#2B3138] bg-[#171A1D]">
-      <div className="mx-auto max-w-[1360px] px-6 py-14">
+    <section
+      id="hardware"
+      style={{
+        backgroundColor: theme.bgCanvas,
+        borderColor: theme.border,
+      }}
+      className="border-b scroll-mt-16"
+    >
+      <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-14">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs font-mono-tech uppercase tracking-[0.16em] text-[#22D3EE]">
+            <p
+              style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+              className="text-xs font-mono-tech uppercase tracking-[0.16em]"
+            >
               02 · Hardware Catalog
             </p>
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#F2EFE9] mt-1">
+            <h2
+              style={{ color: theme.textPrimary }}
+              className="font-display text-2xl sm:text-3xl font-bold mt-1"
+            >
               Commercial Fleet Hardware
             </h2>
-            <p className="mt-2 text-sm text-[#A7B0BC]">
+            <p style={{ color: theme.textSecondary }} className="mt-2 text-sm">
               {clientConfig.catalogHeaderLine}
             </p>
           </div>
-          <span className="text-xs font-mono-tech text-[#76808D]">
+          <span style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
             {clientConfig.brand.demoNote}
           </span>
         </div>
@@ -102,11 +130,13 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
         <div
           role="tablist"
           aria-label="Filter hardware by category"
-          className="flex flex-wrap items-center justify-between gap-3 border-b border-[#2B3138] pb-4 mb-8"
+          style={{ borderColor: theme.border }}
+          className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 mb-8"
         >
           <div className="flex flex-wrap items-center gap-2">
             {clientConfig.categories.map((cat) => {
               const active = selectedCategory === cat;
+              const activeAccent = theme.isLight ? theme.accentPrimary : theme.accentInfo;
               return (
                 <button
                   key={cat}
@@ -114,11 +144,20 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                   role="tab"
                   aria-selected={active}
                   onClick={() => onSelectCategory(cat)}
-                  className={`rounded-xs px-3.5 py-2 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                  style={
                     active
-                      ? 'bg-[#23282E] text-[#22D3EE] border border-[#22D3EE]/50'
-                      : 'bg-transparent text-[#A7B0BC] border border-[#2B3138] hover:border-[#343C46] hover:text-[#F2EFE9]'
-                  }`}
+                      ? {
+                          backgroundColor: theme.bgElevated,
+                          color: activeAccent,
+                          borderColor: `${activeAccent}88`,
+                        }
+                      : {
+                          backgroundColor: 'transparent',
+                          color: theme.textSecondary,
+                          borderColor: theme.border,
+                        }
+                  }
+                  className="rounded-xs border px-3.5 py-2 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 >
                   {cat}
                 </button>
@@ -127,14 +166,16 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
           </div>
 
           {normalizedQuery && (
-            <div className="flex items-center gap-2 text-xs font-mono-tech text-[#A7B0BC]">
-              <span>
-                Filter: <span className="text-[#22D3EE]">&ldquo;{searchQuery}&rdquo;</span>
+            <div className="flex items-center gap-2 text-xs font-mono-tech">
+              <span style={{ color: theme.textSecondary }}>
+                Filter:{' '}
+                <span style={{ color: theme.accentInfo }}>&ldquo;{searchQuery}&rdquo;</span>
               </span>
               <button
                 type="button"
                 onClick={onClearSearch}
-                className="text-[#F2EFE9] underline underline-offset-4 hover:text-[#22D3EE] cursor-pointer"
+                style={{ color: theme.textPrimary }}
+                className="underline underline-offset-4 cursor-pointer"
               >
                 Clear
               </button>
@@ -142,10 +183,15 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
           )}
         </div>
 
-        {/* Product Grid */}
         {filteredProducts.length === 0 ? (
-          <div className="border border-[#2B3138] bg-[#1D2126] p-8 text-center space-y-3">
-            <p className="text-sm text-[#A7B0BC]">
+          <div
+            style={{
+              backgroundColor: theme.bgSurface,
+              borderColor: theme.border,
+            }}
+            className="border p-8 text-center space-y-3"
+          >
+            <p style={{ color: theme.textSecondary }} className="text-sm">
               No hardware SKUs matched &ldquo;{searchQuery}&rdquo; in {selectedCategory}.
             </p>
             <button
@@ -154,7 +200,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                 onClearSearch();
                 onSelectCategory('All Hardware');
               }}
-              className="rounded-xs border border-[#343C46] px-4 py-2 text-xs font-semibold text-[#F2EFE9] hover:border-[#22D3EE] cursor-pointer"
+              style={{
+                borderColor: theme.borderStrong,
+                color: theme.textPrimary,
+              }}
+              className="rounded-xs border px-4 py-2 text-xs font-semibold cursor-pointer"
             >
               Reset catalog filters
             </button>
@@ -169,41 +219,77 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                 <article
                   key={product.sku}
                   data-testid={`product-card-${product.sku}`}
-                  className="group flex flex-col border border-[#2B3138] bg-[#1D2126] hover:border-[#3A434E] transition-colors"
+                  style={{
+                    backgroundColor: theme.bgSurface,
+                    borderColor: theme.border,
+                  }}
+                  className="group flex flex-col border transition-shadow hover:shadow-lg"
                 >
-                  <ProductCardMedia product={product} />
+                  <ProductCardMedia product={product} theme={theme} />
 
                   <div className="flex flex-col flex-1 p-5">
                     <div className="flex items-center justify-between gap-2 text-xs font-mono-tech">
-                      <span className="text-[#22D3EE] font-semibold">{product.sku}</span>
-                      <span className="text-[#76808D]">{product.category}</span>
+                      <span
+                        style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                        className="font-semibold"
+                      >
+                        {product.sku}
+                      </span>
+                      <span style={{ color: theme.textMuted }}>{product.category}</span>
                     </div>
 
-                    <h3 className="mt-2 font-display text-lg font-semibold text-[#F2EFE9] leading-snug">
+                    <h3
+                      style={{ color: theme.textPrimary }}
+                      className="mt-2 font-display text-lg font-semibold leading-snug"
+                    >
                       {product.name}
                     </h3>
 
-                    <p className="mt-2 text-sm text-[#A7B0BC] leading-relaxed">
+                    <p
+                      style={{ color: theme.textSecondary }}
+                      className="mt-2 text-sm leading-relaxed"
+                    >
                       {product.description}
                     </p>
 
                     {/* Spec Cells (Power / Interface / IP rating) */}
-                    <div className="mt-4 grid grid-cols-3 gap-2 border-y border-[#262C34] py-3 text-[11px] font-mono-tech">
+                    <div
+                      style={{ borderColor: theme.border }}
+                      className="mt-4 grid grid-cols-3 gap-2 border-y py-3 text-[11px] font-mono-tech"
+                    >
                       <div>
-                        <div className="text-[#76808D] uppercase">Power</div>
-                        <div className="text-[#F2EFE9] mt-0.5 truncate" title={product.specs.power}>
+                        <div style={{ color: theme.textMuted }} className="uppercase">
+                          Power
+                        </div>
+                        <div
+                          style={{ color: theme.textPrimary }}
+                          className="mt-0.5 truncate"
+                          title={product.specs.power}
+                        >
                           {product.specs.power}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[#76808D] uppercase">Interface</div>
-                        <div className="text-[#F2EFE9] mt-0.5 truncate" title={product.specs.interface}>
+                        <div style={{ color: theme.textMuted }} className="uppercase">
+                          Interface
+                        </div>
+                        <div
+                          style={{ color: theme.textPrimary }}
+                          className="mt-0.5 truncate"
+                          title={product.specs.interface}
+                        >
                           {product.specs.interface}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[#76808D] uppercase">Rating</div>
-                        <div className="text-[#F2EFE9] mt-0.5 truncate" title={product.specs.ipRating}>
+                        <div style={{ color: theme.textMuted }} className="uppercase">
+                          Rating
+                        </div>
+                        <div
+                          style={{ color: theme.textPrimary }}
+                          className="mt-0.5 truncate"
+                          title={product.specs.ipRating}
+                        >
                           {product.specs.ipRating}
                         </div>
                       </div>
@@ -212,15 +298,21 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                     {/* Pricing from Tier 1 */}
                     <div className="mt-4 flex items-baseline justify-between gap-2">
                       <div>
-                        <div className="font-mono-tech text-base font-semibold text-[#F2EFE9]">
+                        <div
+                          style={{ color: theme.textPrimary }}
+                          className="font-mono-tech text-base font-semibold"
+                        >
                           From {formatCad(tier1Price)} / {product.unitLabel}
                         </div>
-                        <div className="text-xs text-[#76808D] mt-0.5">
+                        <div style={{ color: theme.textMuted }} className="text-xs mt-0.5">
                           Volume tiers available
                         </div>
                       </div>
                       {qtyInQuote > 0 && (
-                        <span className="text-xs font-mono-tech text-[#22D3EE]">
+                        <span
+                          style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                          className="text-xs font-mono-tech font-semibold"
+                        >
                           In quote: {qtyInQuote}
                         </span>
                       )}
@@ -232,7 +324,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         type="button"
                         onClick={() => onAddToQuote(product.sku)}
                         data-testid={`add-to-quote-${product.sku}`}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xs bg-[#F59E0B] px-4 py-2.5 text-xs font-semibold text-[#111417] hover:bg-[#FBBF24] transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                        style={{
+                          backgroundColor: theme.ctaBg,
+                          color: theme.ctaText,
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xs px-4 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <Plus className="w-4 h-4" aria-hidden="true" />
                         <span>Add to quote</span>
@@ -241,7 +337,8 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                       <button
                         type="button"
                         onClick={() => onViewSpecs(product)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A7B0BC] hover:text-[#22D3EE] underline underline-offset-4 decoration-[#343C46] hover:decoration-[#22D3EE] transition-colors cursor-pointer whitespace-nowrap"
+                        style={{ color: theme.textSecondary }}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline underline-offset-4 cursor-pointer whitespace-nowrap"
                       >
                         <FileText className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>View specs &amp; tiers</span>

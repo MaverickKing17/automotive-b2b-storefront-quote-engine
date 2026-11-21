@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ClipboardList, Search, X } from 'lucide-react';
-import { clientConfig } from '../data/clientConfig';
-import { BrandMark } from './BlueprintArtwork';
+import { ClipboardList, Search, X, Menu } from 'lucide-react';
+import type { StorefrontConfig } from '../data/storefronts';
+import { StorefrontLogo } from './BlueprintArtwork';
 
 interface HeaderProps {
+  storefront: StorefrontConfig;
   lineItemCount: number;
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -12,14 +13,15 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  storefront,
   lineItemCount,
   searchQuery,
   onSearchChange,
   onSelectCategory,
   onOpenDrawer,
 }) => {
-  const [logoError, setLogoError] = useState(false);
-  const navCategories = clientConfig.categories.filter((c) => c !== 'All Hardware');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme } = storefront;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,57 +30,58 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#262C34] bg-[#0F1318]/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-6 px-6 py-3">
-        {/* Zone 1: Top-Left Logo + Brand Wordmark */}
+    <header
+      style={{
+        backgroundColor: theme.headerBg,
+        borderColor: theme.border,
+        color: theme.textPrimary,
+      }}
+      className="sticky top-0 z-30 border-b backdrop-blur-md"
+    >
+      <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-6 px-4 sm:px-6 py-3">
+        {/* Zone 1: Top-Left Logo + Brand Name */}
         <a
           href="#top"
-          className="flex items-center gap-3 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22D3EE]"
+          className="flex items-center gap-3 whitespace-nowrap shrink-0 focus-visible:outline-none"
         >
-          {!logoError && clientConfig.brand.logoUrl ? (
-            <img
-              src={clientConfig.brand.logoUrl}
-              alt={`${clientConfig.brand.name} logo`}
-              referrerPolicy="no-referrer"
-              onError={() => setLogoError(true)}
-              className="h-9 w-auto max-w-[160px] object-contain"
-            />
-          ) : (
-            <BrandMark className="w-8 h-8" />
-          )}
-          <span className="font-display text-sm sm:text-base font-bold tracking-wider uppercase text-[#F2EFE9]">
-            {clientConfig.brand.name}
+          <StorefrontLogo storefront={storefront} />
+          <span
+            style={{ color: theme.textPrimary }}
+            className="font-display text-sm sm:text-base font-bold tracking-wider uppercase"
+          >
+            {storefront.brandName}
           </span>
         </a>
 
-        {/* Zone 2: Category Nav */}
+        {/* Zone 2: Desktop Navigation */}
         <nav
-          aria-label="Hardware categories"
-          className="hidden xl:flex items-center gap-5 text-[13px] font-medium text-[#A7B0BC]"
+          aria-label="Storefront navigation"
+          style={{ color: theme.textSecondary }}
+          className="hidden lg:flex items-center gap-5 text-[13px] font-medium"
         >
-          {navCategories.map((category) => (
+          {storefront.navLinks.map((link) => (
             <a
-              key={category}
-              href="#hardware"
-              onClick={() => onSelectCategory(category)}
-              className="whitespace-nowrap shrink-0 py-1 hover:text-[#F2EFE9] border-b border-transparent hover:border-[#22D3EE] transition-colors"
+              key={link.label}
+              href={link.href}
+              onClick={() => {
+                if (link.category) {
+                  onSelectCategory(link.category);
+                }
+              }}
+              className="whitespace-nowrap shrink-0 py-1 hover:opacity-100 opacity-85 transition-opacity"
+              style={{ color: theme.textSecondary }}
             >
-              {category}
+              {link.label}
             </a>
           ))}
-          <a
-            href="#fitment"
-            className="whitespace-nowrap shrink-0 py-1 hover:text-[#F2EFE9] border-b border-transparent hover:border-[#22D3EE] transition-colors"
-          >
-            Fitment
-          </a>
         </nav>
 
-        {/* Zone 3: Search Input + Amber Quote List Button */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Zone 3: Search + Quote List Action */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative">
             <Search
-              className="w-3.5 h-3.5 text-[#76808D] absolute left-3 pointer-events-none"
+              style={{ color: theme.textMuted }}
+              className="w-3.5 h-3.5 absolute left-3 pointer-events-none"
               aria-hidden="true"
             />
             <input
@@ -87,14 +90,20 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search products..."
               aria-label="Search hardware catalog"
-              className="w-48 lg:w-60 h-9 rounded-xs border border-[#2B3138] bg-[#171A1D] pl-8 pr-7 text-xs text-[#F2EFE9] placeholder:text-[#76808D] focus:border-[#22D3EE] focus:outline-none"
+              style={{
+                backgroundColor: theme.bgInput,
+                borderColor: theme.border,
+                color: theme.textPrimary,
+              }}
+              className="w-44 xl:w-56 h-9 rounded-xs border pl-8 pr-7 text-xs focus:outline-none"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
                 aria-label="Clear search"
-                className="absolute right-2 text-[#76808D] hover:text-[#F2EFE9] cursor-pointer"
+                style={{ color: theme.textMuted }}
+                className="absolute right-2 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -105,16 +114,78 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenDrawer}
             data-testid="header-quote-list-btn"
-            className="inline-flex items-center gap-2 rounded-xs bg-[#F59E0B] px-4 py-2 text-xs font-semibold tracking-wide text-[#111417] hover:bg-[#FBBF24] transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171A1D]"
+            style={{
+              backgroundColor: theme.ctaBg,
+              color: theme.ctaText,
+            }}
+            className="inline-flex items-center gap-2 rounded-xs px-3.5 sm:px-4 py-2 text-xs font-semibold tracking-wide transition-opacity hover:opacity-90 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <ClipboardList className="w-4 h-4" aria-hidden="true" />
-            <span>Quote List</span>
+            <span>{storefront.quoteButtonLabel}</span>
             <span className="font-mono-tech font-bold" data-testid="quote-line-item-count">
               ({lineItemCount})
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Toggle navigation menu"
+            style={{ borderColor: theme.border, color: theme.textPrimary }}
+            className="lg:hidden p-2 border rounded-xs cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Nav Drawer */}
+      {mobileMenuOpen && (
+        <div
+          style={{
+            backgroundColor: theme.bgSurface,
+            borderColor: theme.border,
+          }}
+          className="lg:hidden border-t px-4 py-3 space-y-3"
+        >
+          <form onSubmit={handleSearchSubmit} className="md:hidden relative">
+            <Search
+              style={{ color: theme.textMuted }}
+              className="w-3.5 h-3.5 absolute left-3 top-2.5 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search products..."
+              aria-label="Search hardware catalog mobile"
+              style={{
+                backgroundColor: theme.bgInput,
+                borderColor: theme.border,
+                color: theme.textPrimary,
+              }}
+              className="w-full h-9 rounded-xs border pl-8 pr-3 text-xs focus:outline-none"
+            />
+          </form>
+          <div className="flex flex-wrap gap-3">
+            {storefront.navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => {
+                  if (link.category) onSelectCategory(link.category);
+                  setMobileMenuOpen(false);
+                }}
+                style={{ color: theme.textPrimary }}
+                className="text-xs font-medium py-1"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </header>
   );
 };
