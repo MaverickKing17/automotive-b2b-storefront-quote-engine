@@ -273,6 +273,35 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                       <ArrowRight className="w-3.5 h-3.5 opacity-80" aria-hidden="true" />
                     </a>
                   </>
+                ) : storefront.id === 'voltdepot' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onOpenDrawer}
+                      style={{
+                        backgroundColor: theme.ctaBg,
+                        color: theme.ctaText,
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.secondaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleBrowsePrimary}
+                      style={{
+                        borderColor: theme.borderStrong,
+                        backgroundColor: 'rgba(15, 19, 23, 0.78)',
+                        color: theme.textPrimary,
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.primaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
