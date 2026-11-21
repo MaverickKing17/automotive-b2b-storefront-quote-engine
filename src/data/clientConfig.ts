@@ -37,7 +37,8 @@ export interface CatalogProduct {
 }
 
 export interface CategoryShowcaseItem {
-  category: CatalogProduct['category'];
+  category: CatalogProduct['category'] | 'All Hardware';
+  title: string;
   subtitle: string;
   imageUrl: string;
 }
@@ -68,28 +69,38 @@ export const clientConfig = {
     tagline: 'Automotive Technology · Fleet Solutions',
     demoNote: 'Demo catalogue — sample data',
     copyright: '© 2026 Astrateq Gadgets. Demo storefront — sample catalog & fitment data.',
-    heroImageUrl: '/src/assets/images/hero_flagship_highway_1795290916017.jpg',
+    heroImageUrl: '/src/assets/images/hero_astrateq_sedan_dusk_1795291942896.jpg',
   },
   categoryShowcase: [
     {
       category: 'Video Telematics',
-      subtitle: 'Dual-lens dashcams & cabin sensors',
+      title: 'Dashcams & Video Telematics',
+      subtitle: 'Dual-lens AI dashcams & cabin sensors',
       imageUrl: '/src/assets/images/cat_video_telematics_1795290659913.jpg',
     },
     {
       category: 'Fleet ELD & GPS',
+      title: 'Vehicle Diagnostics',
       subtitle: 'J1939 & OBD-II diagnostic gateways',
       imageUrl: '/src/assets/images/cat_fleet_eld_gps_1795290659703.jpg',
     },
     {
+      category: 'EV Power & Diagnostics',
+      title: 'EV Solutions',
+      subtitle: 'Depot OCPP 1.6 charger controllers',
+      imageUrl: '/src/assets/images/cat_ev_power_1795290659544.jpg',
+    },
+    {
       category: 'ADAS Retrofits',
-      subtitle: 'Blind-spot radar & sealed harnesses',
+      title: 'Fleet Management',
+      subtitle: 'Blind-spot radar & chassis retrofits',
       imageUrl: '/src/assets/images/cat_adas_retrofits_1795290660333.jpg',
     },
     {
-      category: 'EV Power & Diagnostics',
-      subtitle: 'Depot OCPP 1.6 charger controllers',
-      imageUrl: '/src/assets/images/cat_ev_power_1795290659544.jpg',
+      category: 'ADAS Retrofits',
+      title: 'Accessories',
+      subtitle: 'Sealed wiring harnesses & mounting kits',
+      imageUrl: '/src/assets/images/cat_accessories_twilight_1795291942843.jpg',
     },
   ] satisfies CategoryShowcaseItem[],
   theme: {

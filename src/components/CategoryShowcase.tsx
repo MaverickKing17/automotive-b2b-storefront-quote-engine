@@ -1,13 +1,13 @@
 import React from 'react';
 import {
-  ChevronRight,
   ArrowRight,
-  ShieldCheck,
+  ChevronRight,
+  Headphones,
   Layers,
+  MapPin,
+  ShieldCheck,
   Wrench,
   Zap,
-  MapPin,
-  Headphones,
 } from 'lucide-react';
 import { clientConfig } from '../data/clientConfig';
 import type { StorefrontConfig, TrustPillar } from '../data/storefronts';
@@ -16,12 +16,6 @@ interface CategoryShowcaseProps {
   storefront: StorefrontConfig;
   onSelectCategory: (category: string) => void;
 }
-
-const ALL_HARDWARE_CARD = {
-  category: 'All Hardware',
-  subtitle: 'Complete CAD hardware roster',
-  imageUrl: '/src/assets/images/hero_fleet_twilight_clean_1795290674040.jpg',
-};
 
 const PillarIcon: React.FC<{ icon: TrustPillar['icon']; color: string }> = ({
   icon,
@@ -38,42 +32,36 @@ const PillarIcon: React.FC<{ icon: TrustPillar['icon']; color: string }> = ({
 export const TrustPillarsStrip: React.FC<{
   storefront: StorefrontConfig;
   overlapping?: boolean;
-}> = ({ storefront, overlapping = false }) => {
+}> = ({ storefront }) => {
   const { theme, trustPillars } = storefront;
-  const iconColor = theme.isLight ? theme.accentPrimary : storefront.id === 'astrateq' ? theme.accentInfo : theme.accentPrimary;
+  const iconColor = theme.accentInfo;
 
   return (
-    <div
-      className={
-        overlapping
-          ? 'relative z-10 -mt-8 mx-auto max-w-[1360px] px-4 sm:px-6'
-          : 'mx-auto max-w-[1360px] px-4 sm:px-6 py-6'
-      }
-    >
+    <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pt-5 pb-3">
       <div
         style={{
-          backgroundColor: theme.bgSurface,
-          borderColor: theme.border,
+          backgroundColor: '#0D1420',
+          borderColor: '#1C2A3E',
         }}
-        className="grid grid-cols-1 md:grid-cols-3 border divide-y md:divide-y-0 md:divide-x shadow-lg"
+        className="grid grid-cols-1 md:grid-cols-3 rounded-xl border divide-y md:divide-y-0 md:divide-x shadow-lg"
       >
         {trustPillars.map((pillar) => (
           <div
             key={pillar.title}
-            style={{ borderColor: theme.border }}
-            className="flex items-center gap-3.5 px-5 py-4"
+            style={{ borderColor: '#1C2A3E' }}
+            className="flex items-center md:justify-center gap-3.5 px-6 py-4"
           >
             <div
               style={{
                 borderColor: `${iconColor}44`,
                 backgroundColor: `${iconColor}14`,
               }}
-              className="w-10 h-10 rounded-xs border flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-lg border flex items-center justify-center shrink-0"
             >
               <PillarIcon icon={pillar.icon} color={iconColor} />
             </div>
             <div>
-              <div style={{ color: theme.textPrimary }} className="text-sm font-semibold">
+              <div style={{ color: theme.textPrimary }} className="text-sm font-semibold leading-snug">
                 {pillar.title}
               </div>
               <div style={{ color: theme.textSecondary }} className="text-xs mt-0.5">
@@ -97,7 +85,7 @@ export const NeedAdviceCard: React.FC<{ storefront: StorefrontConfig }> = ({ sto
         backgroundColor: theme.bgSurface,
         borderColor: theme.borderStrong,
       }}
-      className="border p-5 flex flex-col justify-between h-full"
+      className="rounded-xl border p-5 flex flex-col justify-between h-full"
     >
       <div className="flex items-start gap-3.5">
         <div
@@ -105,7 +93,7 @@ export const NeedAdviceCard: React.FC<{ storefront: StorefrontConfig }> = ({ sto
             borderColor: `${accent}55`,
             backgroundColor: `${accent}18`,
           }}
-          className="w-10 h-10 rounded-xs border flex items-center justify-center shrink-0"
+          className="w-10 h-10 rounded-lg border flex items-center justify-center shrink-0"
         >
           <Headphones style={{ color: accent }} className="w-5 h-5" aria-hidden="true" />
         </div>
@@ -139,10 +127,6 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
   onSelectCategory,
 }) => {
   const { theme } = storefront;
-  const showFiveCards = storefront.id === 'astrateq';
-  const cards = showFiveCards
-    ? [...clientConfig.categoryShowcase, ALL_HARDWARE_CARD]
-    : clientConfig.categoryShowcase;
 
   const handlePick = (category: string) => {
     onSelectCategory(category);
@@ -158,7 +142,7 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
       }}
       className="border-b"
     >
-      <div className="mx-auto max-w-[1360px] px-4 sm:px-6 py-10">
+      <div className="mx-auto max-w-[1360px] px-4 sm:px-6 pt-8 pb-12">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
           <div>
             <h2
@@ -174,97 +158,43 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
           <button
             type="button"
             onClick={() => handlePick('All Hardware')}
-            style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+            style={{ color: theme.accentInfo }}
             className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline underline-offset-4 cursor-pointer whitespace-nowrap"
           >
-            <span>View All Hardware</span>
+            <span>View All Categories</span>
             <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
 
-        <div
-          className={`grid grid-cols-1 sm:grid-cols-2 ${
-            showFiveCards ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
-          } gap-4`}
-        >
-          {cards.map((item) => {
-            if (storefront.categoryCardStyle === 'light-framed') {
-              return (
-                <button
-                  key={item.category}
-                  type="button"
-                  onClick={() => handlePick(item.category)}
-                  style={{
-                    backgroundColor: theme.bgSurface,
-                    borderColor: theme.border,
-                  }}
-                  className="group overflow-hidden rounded-xs border text-left hover:shadow-md transition-all cursor-pointer flex flex-col"
-                >
-                  <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.category}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                    />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {clientConfig.categoryShowcase.map((item) => (
+            <button
+              key={item.title}
+              type="button"
+              onClick={() => handlePick(item.category)}
+              style={{ borderColor: '#1E2B3D' }}
+              className="group relative aspect-[16/11] w-full overflow-hidden rounded-xl border bg-[#0E1522] text-left transition-colors hover:border-[#22D3EE]/50 cursor-pointer"
+            >
+              <img
+                src={item.imageUrl}
+                alt={item.title}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#070B12] via-[#070B12]/45 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-3.5 flex items-end justify-between gap-2">
+                <div>
+                  <div className="font-display text-xs sm:text-[13px] font-bold text-[#F3F6FA] leading-snug">
+                    {item.title}
                   </div>
-                  <div className="p-4 flex items-center justify-between gap-2 w-full">
-                    <div>
-                      <div
-                        style={{ color: theme.textPrimary }}
-                        className="font-display text-sm font-bold leading-tight"
-                      >
-                        {item.category}
-                      </div>
-                      <div
-                        style={{ color: theme.textSecondary }}
-                        className="text-xs mt-0.5 line-clamp-1"
-                      >
-                        {item.subtitle}
-                      </div>
-                    </div>
-                    <ChevronRight
-                      style={{ color: theme.accentPrimary }}
-                      className="w-4 h-4 shrink-0"
-                      aria-hidden="true"
-                    />
-                  </div>
-                </button>
-              );
-            }
-
-            return (
-              <button
-                key={item.category}
-                type="button"
-                onClick={() => handlePick(item.category)}
-                style={{ borderColor: theme.border }}
-                className="group relative aspect-[16/10] w-full overflow-hidden rounded-xs border bg-[#12161C] text-left transition-colors cursor-pointer"
-              >
-                <img
-                  src={item.imageUrl}
-                  alt={item.category}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0D12] via-[#0A0D12]/55 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-3.5 flex items-end justify-between gap-2">
-                  <div>
-                    <div className="font-display text-xs sm:text-sm font-bold text-[#F2EFE9] leading-tight">
-                      {item.category}
-                    </div>
-                    <div className="text-[11px] text-[#B8C0CC] mt-0.5 line-clamp-1">
-                      {item.subtitle}
-                    </div>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 text-[#C2C9D2] shrink-0"
-                    aria-hidden="true"
-                  />
                 </div>
-              </button>
-            );
-          })}
+                <ChevronRight
+                  className="w-4 h-4 text-[#9FB0C4] group-hover:text-[#22D3EE] transition-colors shrink-0"
+                  aria-hidden="true"
+                />
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </section>

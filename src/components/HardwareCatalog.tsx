@@ -223,7 +223,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                     backgroundColor: theme.bgSurface,
                     borderColor: theme.border,
                   }}
-                  className="group flex flex-col border transition-shadow hover:shadow-lg"
+                  className="group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[#22D3EE]/40 hover:shadow-lg"
                 >
                   <ProductCardMedia product={product} theme={theme} />
 
@@ -328,7 +328,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                           backgroundColor: theme.ctaBg,
                           color: theme.ctaText,
                         }}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xs px-4 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <Plus className="w-4 h-4" aria-hidden="true" />
                         <span>Add to quote</span>

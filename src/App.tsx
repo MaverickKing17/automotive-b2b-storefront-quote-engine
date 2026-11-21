@@ -6,11 +6,7 @@ import {
   type CatalogProduct,
   type PolicyItem,
 } from './data/clientConfig';
-import {
-  STOREFRONTS,
-  STOREFRONT_ORDER,
-  type StorefrontId,
-} from './data/storefronts';
+import { STOREFRONTS } from './data/storefronts';
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -19,7 +15,6 @@ import type {
   VehicleGroup,
   VehicleSelection,
 } from './types/quote';
-import { StorefrontSwitcher } from './components/StorefrontSwitcher';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { CategoryShowcase } from './components/CategoryShowcase';
@@ -78,21 +73,7 @@ function loadQuoteState(): PersistedQuoteState {
   }
 }
 
-function getInitialStorefrontId(): StorefrontId {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const storeParam = params.get('store') as StorefrontId | null;
-    if (storeParam && STOREFRONT_ORDER.includes(storeParam)) {
-      return storeParam;
-    }
-  } catch {
-    // Ignore URL parsing errors
-  }
-  return 'astrateq';
-}
-
 export default function App() {
-  const [storefrontId, setStorefrontId] = useState<StorefrontId>(getInitialStorefrontId);
   const [quoteState, setQuoteState] = useState<PersistedQuoteState>(loadQuoteState);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Hardware');
@@ -100,7 +81,7 @@ export default function App() {
   const [activeSpecsProduct, setActiveSpecsProduct] = useState<CatalogProduct | null>(null);
   const [activePolicy, setActivePolicy] = useState<PolicyItem | null>(null);
 
-  const activeStorefront = STOREFRONTS[storefrontId];
+  const activeStorefront = STOREFRONTS.astrateq;
 
   useEffect(() => {
     try {
@@ -109,21 +90,6 @@ export default function App() {
       // Ignore storage quota errors
     }
   }, [quoteState]);
-
-  const handleSelectStorefront = (nextId: StorefrontId) => {
-    setStorefrontId(nextId);
-    try {
-      const url = new URL(window.location.href);
-      if (nextId === 'astrateq') {
-        url.searchParams.delete('store');
-      } else {
-        url.searchParams.set('store', nextId);
-      }
-      window.history.replaceState({}, '', url.toString());
-    } catch {
-      // Ignore history API issues
-    }
-  };
 
   const handleAddProduct = (sku: string) => {
     const product = getProductBySku(sku);
@@ -274,8 +240,6 @@ export default function App() {
       }}
       className="min-h-screen flex flex-col transition-colors duration-200"
     >
-      <StorefrontSwitcher activeId={storefrontId} onSelect={handleSelectStorefront} />
-
       <Header
         storefront={activeStorefront}
         lineItemCount={quoteState.lineItems.length}
