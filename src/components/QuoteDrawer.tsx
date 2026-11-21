@@ -23,7 +23,7 @@ import {
   type PolicyItem,
 } from '../data/clientConfig';
 import {
-  getProductBySkuAcrossAll,
+  getProductBySkuForStorefront,
   type StorefrontConfig,
 } from '../data/storefronts';
 import type {
@@ -101,9 +101,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     submittedRecord,
   } = quoteState;
 
-  const recommendedAddonProduct = getProductBySkuAcrossAll(
-    storefront.recommendedAddonSku,
-    storefront.id
+  const recommendedAddonProduct = getProductBySkuForStorefront(
+    storefront.id,
+    storefront.recommendedAddonSku
   );
   const addonInQuote = recommendedAddonProduct
     ? lineItems.some((item) => item.sku === recommendedAddonProduct.sku)
@@ -199,7 +199,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       .slice(-3)}`;
 
     const computedLines = lineItems.map((item) => {
-      const product = getProductBySkuAcrossAll(item.sku, storefront.id);
+      const product = getProductBySkuForStorefront(storefront.id, item.sku);
       if (!product) {
         return { sku: item.sku, quantity: item.quantity };
       }
@@ -284,7 +284,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   };
 
   const pricedSubtotal = lineItems.reduce((sum, item) => {
-    const product = getProductBySkuAcrossAll(item.sku, storefront.id);
+    const product = getProductBySkuForStorefront(storefront.id, item.sku);
     if (!product) return sum;
     const tier = getTierForQuantity(product, item.quantity);
     if (tier.unitPrice === null) return sum;
@@ -294,7 +294,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const hasFormalQuoteLine =
     installationRequested ||
     lineItems.some((item) => {
-      const product = getProductBySkuAcrossAll(item.sku, storefront.id);
+      const product = getProductBySkuForStorefront(storefront.id, item.sku);
       return product ? getTierForQuantity(product, item.quantity).unitPrice === null : false;
     });
 
@@ -561,7 +561,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     ) : (
                       <div className="space-y-3">
                         {lineItems.map((item) => {
-                          const product = getProductBySkuAcrossAll(item.sku, storefront.id);
+                          const product = getProductBySkuForStorefront(storefront.id, item.sku);
                           if (!product) return null;
                           const activeTier = getTierForQuantity(product, item.quantity);
                           const isFormalQuote = activeTier.unitPrice === null;
@@ -1651,7 +1651,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     ) : (
                       <div className="divide-y" style={{ borderColor: theme.border }}>
                         {lineItems.map((item) => {
-                          const product = getProductBySkuAcrossAll(item.sku, storefront.id);
+                          const product = getProductBySkuForStorefront(storefront.id, item.sku);
                           if (!product) return null;
                           const tier = getTierForQuantity(product, item.quantity);
                           const total =

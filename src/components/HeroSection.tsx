@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2, MapPin, Plus, Zap } from 'lucide-react';
 import { formatCad, getTier1Price } from '../data/clientConfig';
-import { getProductBySkuAcrossAll, type StorefrontConfig } from '../data/storefronts';
+import { getProductBySkuForStorefront, type StorefrontConfig } from '../data/storefronts';
 import type { DeploymentAnswers, VehicleSelection } from '../types/quote';
 import { FitmentFinder } from './FitmentFinder';
 import { NeedAdviceCard, TrustPillarsStrip } from './CategoryShowcase';
@@ -186,8 +186,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   // Recommend VoltDepot-specific products based on charging selection
   const voltPrimarySku = evChargingType.toLowerCase().includes('dc') ? 'VDS-220' : 'VDS-110';
-  const voltPrimary = getProductBySkuAcrossAll(voltPrimarySku, 'voltdepot');
-  const voltLoadController = getProductBySkuAcrossAll('VDS-330', 'voltdepot');
+  const voltPrimary = getProductBySkuForStorefront('voltdepot', voltPrimarySku);
+  const voltLoadController = getProductBySkuForStorefront('voltdepot', 'VDS-330');
 
   // STOREFRONTS 2, 3, 4 — Branded Hero + Differentiated Industry Workflows
   return (
@@ -244,44 +244,76 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 {storefront.heroSubtitle}
               </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleBrowsePrimary}
-                  style={
-                    storefront.id === 'northlink'
-                      ? { backgroundColor: '#0F172A', color: '#FFFFFF' }
-                      : { backgroundColor: theme.ctaBg, color: theme.ctaText }
-                  }
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
-                >
-                  <span>{storefront.primaryCtaLabel}</span>
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </button>
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                {storefront.id === 'truenorth' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onOpenDrawer}
+                      style={{
+                        backgroundColor: '#F59E0B',
+                        color: '#090E16',
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:bg-[#FBBF24] transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.secondaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={onOpenDrawer}
-                  style={
-                    storefront.id === 'northlink'
-                      ? {
-                          borderColor: theme.ctaBg,
-                          backgroundColor: theme.ctaBg,
-                          color: theme.ctaText,
-                        }
-                      : {
-                          borderColor: theme.isLight ? theme.accentPrimary : theme.borderStrong,
-                          backgroundColor: theme.isLight
-                            ? 'rgba(255,255,255,0.92)'
-                            : 'rgba(15, 19, 23, 0.78)',
-                          color: theme.isLight ? theme.accentPrimary : theme.textPrimary,
-                        }
-                  }
-                  className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
-                >
-                  <span>{storefront.secondaryCtaLabel}</span>
-                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                </button>
+                    <a
+                      href="#hardware"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleBrowsePrimary();
+                      }}
+                      style={{ color: theme.textPrimary }}
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium underline underline-offset-4 decoration-white/45 hover:decoration-white transition-colors whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.primaryCtaLabel}</span>
+                      <ArrowRight className="w-3.5 h-3.5 opacity-80" aria-hidden="true" />
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleBrowsePrimary}
+                      style={
+                        storefront.id === 'northlink'
+                          ? { backgroundColor: '#0F172A', color: '#FFFFFF' }
+                          : { backgroundColor: theme.ctaBg, color: theme.ctaText }
+                      }
+                      className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.primaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onOpenDrawer}
+                      style={
+                        storefront.id === 'northlink'
+                          ? {
+                              borderColor: theme.ctaBg,
+                              backgroundColor: theme.ctaBg,
+                              color: theme.ctaText,
+                            }
+                          : {
+                              borderColor: theme.isLight ? theme.accentPrimary : theme.borderStrong,
+                              backgroundColor: theme.isLight
+                                ? 'rgba(255,255,255,0.92)'
+                                : 'rgba(15, 19, 23, 0.78)',
+                              color: theme.isLight ? theme.accentPrimary : theme.textPrimary,
+                            }
+                      }
+                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.secondaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

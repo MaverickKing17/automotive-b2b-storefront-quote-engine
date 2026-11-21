@@ -14,7 +14,7 @@ import {
   getTier1Price,
 } from '../data/clientConfig';
 import {
-  getProductBySkuAcrossAll,
+  getProductBySkuForStorefront,
   type StorefrontId,
   type StorefrontTheme,
 } from '../data/storefronts';
@@ -103,7 +103,9 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
 
   const targetAddonSku = recommendedAddonSku ?? result?.recommendedHarnessSku;
   const recommendedHarness =
-    result && targetAddonSku ? getProductBySkuAcrossAll(targetAddonSku, storefrontId) : undefined;
+    result && targetAddonSku
+      ? getProductBySkuForStorefront(storefrontId, targetAddonSku)
+      : undefined;
 
   const selectStyle: React.CSSProperties = isHorizontal
     ? {

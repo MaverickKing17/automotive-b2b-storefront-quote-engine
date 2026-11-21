@@ -6,7 +6,7 @@ import {
   type PolicyItem,
 } from './data/clientConfig';
 import {
-  getProductBySkuAcrossAll,
+  getProductBySkuForStorefront,
   STOREFRONTS,
   STOREFRONT_ORDER,
   type StorefrontId,
@@ -92,8 +92,19 @@ function loadQuoteState(storefrontId: StorefrontId): PersistedQuoteState {
     ) {
       mergedDeployment.fleetSize = defaults.deployment.fleetSize;
     }
+    const validSkus = new Set(STOREFRONTS[storefrontId].products.map((p) => p.sku));
+    const filteredLineItems = Array.isArray(parsed.lineItems)
+      ? parsed.lineItems.filter(
+          (item) =>
+            item &&
+            typeof item.sku === 'string' &&
+            validSkus.has(item.sku) &&
+            typeof item.quantity === 'number' &&
+            item.quantity >= 1
+        )
+      : defaults.lineItems;
     return {
-      lineItems: Array.isArray(parsed.lineItems) ? parsed.lineItems : defaults.lineItems,
+      lineItems: filteredLineItems,
       vehicleGroups: Array.isArray(parsed.vehicleGroups)
         ? parsed.vehicleGroups
         : defaults.vehicleGroups,
@@ -192,7 +203,7 @@ export default function App() {
   };
 
   const handleAddProduct = (sku: string) => {
-    const product = getProductBySkuAcrossAll(sku, storefrontId);
+    const product = getProductBySkuForStorefront(storefrontId, sku);
     if (!product) return;
 
     setQuoteState((prev) => {
@@ -230,7 +241,7 @@ export default function App() {
   };
 
   const handleUpdateQuantity = (sku: string, nextQty: number) => {
-    const product = getProductBySkuAcrossAll(sku, storefrontId);
+    const product = getProductBySkuForStorefront(storefrontId, sku);
     if (!product) return;
     const safeQty = Math.max(1, Math.floor(nextQty) || 1);
 
