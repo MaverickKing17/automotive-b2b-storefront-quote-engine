@@ -133,31 +133,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   </p>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
-                    <a
-                      href="#hardware"
-                      style={{
-                        backgroundColor: theme.accentInfo,
-                        color: '#06131D',
-                      }}
-                      className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity whitespace-nowrap shrink-0"
-                    >
-                      <span>Shop Products</span>
-                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                    </a>
-
                     <button
                       type="button"
                       onClick={onOpenDrawer}
+                      style={{
+                        backgroundColor: theme.ctaBg,
+                        color: theme.ctaText,
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.secondaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
+
+                    <a
+                      href="#hardware"
+                      onClick={() => onSelectCategory(storefront.defaultCategory)}
                       style={{
                         borderColor: '#334A66',
                         backgroundColor: 'rgba(10, 19, 32, 0.78)',
                         color: theme.textPrimary,
                       }}
-                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-medium hover:border-[#22D3EE]/60 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-medium hover:border-[#22D3EE]/60 transition-colors whitespace-nowrap shrink-0"
                     >
-                      <span>Get a Fleet Quote</span>
+                      <span>{storefront.primaryCtaLabel}</span>
                       <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                    </button>
+                    </a>
                   </div>
                 </div>
 
