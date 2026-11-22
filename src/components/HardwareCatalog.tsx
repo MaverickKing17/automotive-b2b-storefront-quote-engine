@@ -6,11 +6,12 @@ import {
   getTier1Price,
   type CatalogProduct,
 } from '../data/clientConfig';
-import type { StorefrontTheme } from '../data/storefronts';
+import type { StorefrontId, StorefrontTheme } from '../data/storefronts';
 import type { QuoteLineItem } from '../types/quote';
 import { ProductSchematic } from './BlueprintArtwork';
 
 interface HardwareCatalogProps {
+  storefrontId?: StorefrontId;
   theme: StorefrontTheme;
   products: CatalogProduct[];
   categories: string[];
@@ -64,6 +65,7 @@ const ProductCardMedia: React.FC<{
 };
 
 export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
+  storefrontId,
   theme,
   products,
   categories,
@@ -79,6 +81,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
   onAddToQuote,
   onViewSpecs,
 }) => {
+  const isAstrateq = storefrontId === 'astrateq';
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   const filteredProducts = products.filter((p) => {
@@ -270,11 +273,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                       className="mt-4 grid grid-cols-3 gap-2 border-y py-3 text-[11px] font-mono-tech"
                     >
                       <div>
-                        <div style={{ color: theme.textMuted }} className="uppercase">
+                        <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Power
                         </div>
                         <div
-                          style={{ color: theme.textPrimary }}
+                          style={{ color: isAstrateq ? '#D6DDE5' : theme.textPrimary }}
                           className="mt-0.5 truncate"
                           title={product.specs.power}
                         >
@@ -282,11 +285,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         </div>
                       </div>
                       <div>
-                        <div style={{ color: theme.textMuted }} className="uppercase">
+                        <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Interface
                         </div>
                         <div
-                          style={{ color: theme.textPrimary }}
+                          style={{ color: isAstrateq ? '#D6DDE5' : theme.textPrimary }}
                           className="mt-0.5 truncate"
                           title={product.specs.interface}
                         >
@@ -294,11 +297,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         </div>
                       </div>
                       <div>
-                        <div style={{ color: theme.textMuted }} className="uppercase">
+                        <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Rating
                         </div>
                         <div
-                          style={{ color: theme.textPrimary }}
+                          style={{ color: isAstrateq ? '#D6DDE5' : theme.textPrimary }}
                           className="mt-0.5 truncate"
                           title={product.specs.ipRating}
                         >
@@ -316,7 +319,10 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         >
                           From {formatCad(tier1Price)} / {product.unitLabel}
                         </div>
-                        <div style={{ color: theme.textMuted }} className="text-xs mt-0.5">
+                        <div
+                          style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }}
+                          className="text-xs mt-0.5"
+                        >
                           Volume tiers available (sample data)
                         </div>
                       </div>

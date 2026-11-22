@@ -14,6 +14,9 @@ export const Footer: React.FC<FooterProps> = ({
   onSelectStorefront,
 }) => {
   const { theme, contactInfo } = storefront;
+  const isAstrateq = storefront.id === 'astrateq';
+  const footerBodyColor = isAstrateq ? '#B4BEC9' : theme.textSecondary;
+  const footerMutedColor = isAstrateq ? '#B4BEC9' : theme.textMuted;
 
   return (
     <footer
@@ -34,10 +37,10 @@ export const Footer: React.FC<FooterProps> = ({
               >
                 {storefront.brandName}
               </div>
-              <div style={{ color: theme.textSecondary }} className="text-xs mt-0.5">
+              <div style={{ color: footerBodyColor }} className="text-xs mt-0.5">
                 {contactInfo.regionLabel} · {contactInfo.email} · {contactInfo.phone}
               </div>
-              <div style={{ color: theme.textMuted }} className="text-xs mt-0.5">
+              <div style={{ color: footerMutedColor }} className="text-xs mt-0.5">
                 © 2026 {storefront.brandName}. Demo storefront — sample catalog &amp; fitment data.
               </div>
             </div>
@@ -45,16 +48,37 @@ export const Footer: React.FC<FooterProps> = ({
 
           <nav
             aria-label="Footer navigation"
-            style={{ color: theme.textSecondary }}
+            style={{ color: footerBodyColor }}
             className="flex flex-wrap items-center gap-6 text-xs font-medium"
           >
-            <a href="#hardware" className="hover:opacity-100 opacity-85 transition-opacity">
+            <a
+              href="#hardware"
+              className={
+                isAstrateq
+                  ? 'hover:text-[#F3F6FA] transition-colors'
+                  : 'hover:opacity-100 opacity-85 transition-opacity'
+              }
+            >
               Hardware
             </a>
-            <a href="#fitment" className="hover:opacity-100 opacity-85 transition-opacity">
+            <a
+              href="#fitment"
+              className={
+                isAstrateq
+                  ? 'hover:text-[#F3F6FA] transition-colors'
+                  : 'hover:opacity-100 opacity-85 transition-opacity'
+              }
+            >
               Fitment
             </a>
-            <a href="#spec-assist" className="hover:opacity-100 opacity-85 transition-opacity">
+            <a
+              href="#spec-assist"
+              className={
+                isAstrateq
+                  ? 'hover:text-[#F3F6FA] transition-colors'
+                  : 'hover:opacity-100 opacity-85 transition-opacity'
+              }
+            >
               Spec assist
             </a>
             <button
@@ -72,7 +96,7 @@ export const Footer: React.FC<FooterProps> = ({
           style={{ borderColor: theme.border }}
           className="border-t pt-5 flex flex-wrap items-center justify-between gap-3 text-xs"
         >
-          <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase tracking-wider">
+          <span style={{ color: footerMutedColor }} className="font-mono-tech uppercase tracking-wider">
             Platform Demonstrations:
           </span>
           <div className="flex flex-wrap items-center gap-3">
@@ -89,7 +113,7 @@ export const Footer: React.FC<FooterProps> = ({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{
-                    color: active ? theme.accentPrimary : theme.textSecondary,
+                    color: active ? theme.accentPrimary : footerBodyColor,
                     fontWeight: active ? 700 : 500,
                   }}
                   className="hover:underline underline-offset-4"

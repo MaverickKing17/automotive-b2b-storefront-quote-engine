@@ -381,6 +381,7 @@ export default function App() {
         />
 
         <HardwareCatalog
+          storefrontId={activeStorefront.id}
           theme={activeStorefront.theme}
           products={activeStorefront.products}
           categories={activeStorefront.categories}
@@ -405,6 +406,7 @@ export default function App() {
         <SpecAssistSection storefront={activeStorefront} />
 
         <PoliciesSection
+          storefrontId={activeStorefront.id}
           theme={activeStorefront.theme}
           policies={activeStorefront.policies}
           onOpenPolicy={setActivePolicy}

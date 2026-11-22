@@ -1,19 +1,22 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import type { PolicyItem } from '../data/clientConfig';
-import type { StorefrontTheme } from '../data/storefronts';
+import type { StorefrontId, StorefrontTheme } from '../data/storefronts';
 
 interface PoliciesSectionProps {
+  storefrontId?: StorefrontId;
   theme: StorefrontTheme;
   policies: PolicyItem[];
   onOpenPolicy: (policy: PolicyItem) => void;
 }
 
 export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
+  storefrontId,
   theme,
   policies,
   onOpenPolicy,
 }) => {
+  const isAstrateq = storefrontId === 'astrateq';
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
 
   return (
@@ -70,7 +73,7 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
                   {policy.title}
                 </h3>
                 <p
-                  style={{ color: theme.textSecondary }}
+                  style={{ color: isAstrateq ? '#B4BEC9' : theme.textSecondary }}
                   className="mt-2.5 text-xs leading-relaxed"
                 >
                   {policy.summary}
