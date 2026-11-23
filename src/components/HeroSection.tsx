@@ -206,6 +206,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               className="w-full h-full object-cover object-right md:object-center contrast-[1.04] saturate-[1.05]"
             />
             <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
+            {storefront.id === 'northlink' && (
+              <div className="sm:hidden absolute inset-0 bg-gradient-to-r from-[#F4F7FA]/88 via-[#F4F7FA]/76 to-[#F4F7FA]/45" />
+            )}
             {!theme.isLight && (
               <div
                 style={{
@@ -220,7 +223,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <div className="max-w-xl">
               <p
                 style={{ color: theme.accentPrimary }}
-                className={`text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5 ${
+                className={`text-[11px] font-mono-tech uppercase ${
+                  storefront.id === 'northlink'
+                    ? 'tracking-[0.06em] sm:tracking-[0.18em]'
+                    : 'tracking-[0.18em]'
+                } font-semibold mb-2.5 ${
                   theme.isLight
                     ? 'drop-shadow-[0_1px_4px_rgba(255,255,255,0.85)]'
                     : 'drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]'
