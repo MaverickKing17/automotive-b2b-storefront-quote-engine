@@ -265,12 +265,12 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
                   src={item.imageUrl}
                   alt={item.title}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
+                  className="w-full h-full object-cover contrast-[1.03] saturate-[1.04] group-hover:scale-[1.04] transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070B12] via-[#070B12]/45 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#070B12]/88 via-[#070B12]/20 via-45% to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-3.5 flex items-end justify-between gap-2">
                   <div>
-                    <div className="font-display text-xs sm:text-[13px] font-bold text-[#F3F6FA] leading-snug">
+                    <div className="font-display text-xs sm:text-[13px] font-bold text-[#F3F6FA] leading-snug drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
                       {item.title}
                     </div>
                   </div>

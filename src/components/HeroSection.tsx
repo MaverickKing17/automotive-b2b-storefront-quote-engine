@@ -94,12 +94,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 src={storefront.heroImageUrl}
                 alt={storefront.heroImageAlt}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-[center_44%] lg:scale-[1.16] lg:-translate-x-[7%]"
+                className="w-full h-full object-cover object-[center_44%] lg:scale-[1.05] lg:-translate-x-[3%] contrast-[1.04] saturate-[1.05]"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#060B13] via-[#070E1A]/85 via-35% to-transparent" />
+              <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
               <div
                 style={{
-                  background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 22%)`,
+                  background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 10%)`,
                 }}
                 className="absolute inset-0"
               />
@@ -110,14 +110,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <div className="max-w-[500px]">
                   <p
                     style={{ color: theme.accentInfo }}
-                    className="text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5"
+                    className="text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]"
                   >
                     AUTOMOTIVE TECHNOLOGY · FLEET SOLUTIONS
                   </p>
 
                   <h1
                     style={{ color: theme.textPrimary }}
-                    className="font-display text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight leading-[1.06]"
+                    className="font-display text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight leading-[1.06] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
                   >
                     Drive With
                     <br />
@@ -126,7 +126,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                   <p
                     style={{ color: '#B6C3D4' }}
-                    className="mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[435px]"
+                    className="mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[435px] drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]"
                   >
                     Advanced automotive hardware, intelligent telematics and fleet technology
                     engineered for modern mobility.
@@ -203,13 +203,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               src={storefront.heroImageUrl}
               alt={storefront.heroImageAlt}
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover object-right md:object-center"
+              className="w-full h-full object-cover object-right md:object-center contrast-[1.04] saturate-[1.05]"
             />
             <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
             {!theme.isLight && (
               <div
                 style={{
-                  background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 25%)`,
+                  background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 10%)`,
                 }}
                 className="absolute inset-0"
               />
@@ -220,14 +220,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <div className="max-w-xl">
               <p
                 style={{ color: theme.accentPrimary }}
-                className="text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5"
+                className={`text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5 ${
+                  theme.isLight
+                    ? 'drop-shadow-[0_1px_4px_rgba(255,255,255,0.85)]'
+                    : 'drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]'
+                }`}
               >
                 {storefront.tagline}
               </p>
 
               <h1
                 style={{ color: theme.textPrimary }}
-                className="font-display text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight leading-[1.06]"
+                className={`font-display text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight leading-[1.06] ${
+                  theme.isLight
+                    ? 'drop-shadow-[0_1px_6px_rgba(255,255,255,0.9)]'
+                    : 'drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]'
+                }`}
               >
                 {storefront.heroHeadlinePrefix}
                 {storefront.heroHeadlineHighlight && (
@@ -240,7 +248,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               <p
                 style={{ color: theme.textSecondary }}
-                className="mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[450px]"
+                className={`mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[450px] ${
+                  theme.isLight
+                    ? 'drop-shadow-[0_1px_4px_rgba(255,255,255,0.9)]'
+                    : 'drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]'
+                }`}
               >
                 {storefront.heroSubtitle}
               </p>

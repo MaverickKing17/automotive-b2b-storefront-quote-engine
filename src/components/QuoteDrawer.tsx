@@ -11,7 +11,6 @@ import {
   Car,
   ShieldCheck,
   FileCheck2,
-  Copy,
   Check,
 } from 'lucide-react';
 import {
@@ -25,7 +24,78 @@ import {
 import {
   getProductBySkuForStorefront,
   type StorefrontConfig,
+  type StorefrontId,
 } from '../data/storefronts';
+
+const STOREFRONT_QUOTE_CODES: Record<StorefrontId, string> = {
+  astrateq: 'AST',
+  northlink: 'NLT',
+  voltdepot: 'VDS',
+  truenorth: 'TNU',
+};
+
+function formatSubmittedSummary(
+  storefront: StorefrontConfig,
+  payload: Record<string, unknown>
+): string {
+  const lines = Array.isArray(payload.hardwareLines) ? payload.hardwareLines : [];
+  const totalUnits = lines.reduce((sum, item) => {
+    const qty =
+      typeof item === 'object' &&
+      item !== null &&
+      'quantity' in item &&
+      typeof (item as { quantity: unknown }).quantity === 'number'
+        ? (item as { quantity: number }).quantity
+        : 0;
+    return sum + qty;
+  }, 0);
+
+  const groups = Array.isArray(payload.vehicleGroups) ? payload.vehicleGroups : [];
+  const totalVehicles = groups.reduce((sum, grp) => {
+    const count =
+      typeof grp === 'object' &&
+      grp !== null &&
+      'vehicleCount' in grp &&
+      typeof (grp as { vehicleCount: unknown }).vehicleCount === 'number'
+        ? (grp as { vehicleCount: number }).vehicleCount
+        : 0;
+    return sum + count;
+  }, 0);
+
+  const deploymentObj =
+    typeof payload.deployment === 'object' && payload.deployment !== null
+      ? (payload.deployment as Partial<DeploymentAnswers>)
+      : undefined;
+
+  const parts = [
+    `${lines.length} ${lines.length === 1 ? 'line item' : 'line items'}`,
+    `${totalUnits} ${totalUnits === 1 ? 'unit' : 'units'}`,
+  ];
+
+  if (groups.length > 0) {
+    parts.push(
+      `${groups.length} vehicle ${groups.length === 1 ? 'group' : 'groups'} (${totalVehicles} ${
+        totalVehicles === 1 ? 'vehicle' : 'vehicles'
+      })`
+    );
+  } else if (storefront.id === 'voltdepot' && storefront.chargingOptions) {
+    const bays = deploymentObj?.chargingBays || storefront.chargingOptions.chargingBays[0];
+    const service =
+      deploymentObj?.electricalService || storefront.chargingOptions.electricalServices[0];
+    parts.push(`Depot: ${bays} · ${service}`);
+  } else if (storefront.id === 'truenorth') {
+    const hub = deploymentObj?.upfitLocation || storefront.upfitLocations?.[0];
+    if (hub) {
+      parts.push(`Hub: ${hub}`);
+    } else {
+      parts.push('0 vehicle groups');
+    }
+  } else {
+    parts.push('0 vehicle groups');
+  }
+
+  return parts.join(' · ');
+}
 import type {
   ContactDetails,
   DeploymentAnswers,
@@ -82,9 +152,6 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const [manualClass, setManualClass] = useState('');
   const [step1Error, setStep1Error] = useState<string | null>(null);
   const [step2Error, setStep2Error] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [copiedPayload, setCopiedPayload] = useState(false);
 
   if (!isOpen) return null;
 
@@ -190,13 +257,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     onSetStep(3);
   };
 
-  const handleSubmitRfq = async () => {
-    setSubmitError(null);
-    setIsSubmitting(true);
-
-    const quoteId = `RFQ-2026-${Math.random().toString(36).substring(2, 6).toUpperCase()}${Date.now()
-      .toString()
-      .slice(-3)}`;
+  const handleSubmitRfq = () => {
+    const randomSixDigits = String(Math.floor(100000 + Math.random() * 900000));
+    const quoteId = `RFQ-${STOREFRONT_QUOTE_CODES[storefront.id]}-${randomSixDigits}`;
 
     const computedLines = lineItems.map((item) => {
       const product = getProductBySkuForStorefront(storefront.id, item.sku);
@@ -233,10 +296,11 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       };
     });
 
+    const createdAt = new Date().toISOString();
     const payload = {
       quoteId,
       idempotencyKey: quoteId,
-      createdAt: new Date().toISOString(),
+      createdAt,
       currency: clientConfig.currency,
       storefrontId: storefront.id,
       brand: storefront.brandName,
@@ -247,40 +311,13 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       contact,
     };
 
-    try {
-      const externalWebhook = clientConfig.webhookUrl.trim();
-      const targetEndpoint = externalWebhook || '/api/rfq';
-      const res = await fetch(targetEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const responseData = (await res.json().catch(() => null)) as
-        | { ok?: boolean; persistedAt?: string; error?: string }
-        | null;
-
-      if (!res.ok) {
-        throw new Error(responseData?.error || `Server responded with status ${res.status}`);
-      }
-
-      onSetSubmittedRecord({
-        quoteId,
-        idempotencyKey: quoteId,
-        submittedAt: responseData?.persistedAt || payload.createdAt,
-        mode: externalWebhook ? 'webhook' : 'backend-api',
-        webhookStatus: `Persisted (${res.status})`,
-        payload,
-      });
-    } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? `RFQ submission failed: ${err.message}.`
-          : 'RFQ submission failed. Please verify backend connectivity.'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    onSetSubmittedRecord({
+      quoteId,
+      idempotencyKey: quoteId,
+      submittedAt: createdAt,
+      mode: 'local-demo',
+      payload,
+    });
   };
 
   const pricedSubtotal = lineItems.reduce((sum, item) => {
@@ -346,10 +383,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
               style={{ color: infoColor }}
               className="text-[11px] font-mono-tech uppercase tracking-[0.16em]"
             >
-              {submittedRecord ? 'RFQ PERSISTED' : `${stepLabels[currentStep]} · ${storefront.brandTitleMain}`}
+              {submittedRecord ? `RFQ SUBMITTED · ${storefront.brandTitleMain}` : `${stepLabels[currentStep]} · ${storefront.brandTitleMain}`}
             </div>
             <h2 className="font-display text-lg font-bold mt-0.5">
-              {submittedRecord ? 'Fleet Quote Reference' : stepTitles[currentStep]}
+              {submittedRecord ? 'Quote Confirmation' : stepTitles[currentStep]}
             </h2>
           </div>
 
@@ -406,128 +443,150 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
         {/* Drawer Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {submittedRecord ? (
-            <div className="space-y-5" data-testid="rfq-confirmation">
-              <div
-                style={{
-                  backgroundColor: theme.bgSurface,
-                  borderColor: theme.badgeVerifiedBorder,
-                }}
-                className="border p-5 space-y-3"
-              >
-                <div
-                  style={{ color: infoColor }}
-                  className="flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider"
-                >
-                  <FileCheck2 className="w-4 h-4" aria-hidden="true" />
-                  <span>
-                    {submittedRecord.mode === 'webhook'
-                      ? 'RFQ Submitted to Configured Webhook'
-                      : submittedRecord.mode === 'backend-api'
-                        ? 'RFQ Persisted to Backend'
-                        : 'Demo Mode — Recorded Locally'}
-                  </span>
-                </div>
+            (() => {
+              const submittedContact =
+                typeof submittedRecord.payload.contact === 'object' &&
+                submittedRecord.payload.contact !== null
+                  ? (submittedRecord.payload.contact as Partial<ContactDetails>)
+                  : contact;
+              const summaryLine = formatSubmittedSummary(storefront, submittedRecord.payload);
 
-                <h3 className="font-display text-xl font-bold">
-                  Quote ID: <span className="font-mono-tech">{submittedRecord.quoteId}</span>
-                </h3>
-
-                {submittedRecord.mode === 'backend-api' ? (
-                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                    Your {storefront.brandName} RFQ payload was saved by the Express backend API (
-                    <code className="font-mono-tech">/api/rfq</code>) with idempotencyKey{' '}
-                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
-                  </p>
-                ) : submittedRecord.mode === 'webhook' ? (
-                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                    JSON RFQ payload delivered to the configured webhook endpoint with idempotencyKey{' '}
-                    <code className="font-mono-tech">{submittedRecord.idempotencyKey}</code>.
-                  </p>
-                ) : (
-                  <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                    Recorded locally in browser storage.
-                  </p>
-                )}
-
-                <div style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
-                  Persisted at: {new Date(submittedRecord.submittedAt).toLocaleString('en-CA')}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  backgroundColor: theme.bgSurface,
-                  borderColor: theme.border,
-                }}
-                className="border p-4 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    style={{ color: theme.textSecondary }}
-                    className="text-xs font-mono-tech uppercase tracking-wider"
-                  >
-                    RFQ JSON Payload (Idempotency Key: {submittedRecord.idempotencyKey})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(
-                        JSON.stringify(submittedRecord.payload, null, 2)
-                      );
-                      setCopiedPayload(true);
-                      setTimeout(() => setCopiedPayload(false), 2000);
+              return (
+                <div className="space-y-5" data-testid="rfq-confirmation">
+                  <div
+                    style={{
+                      backgroundColor: theme.bgSurface,
+                      borderColor: theme.badgeVerifiedBorder,
                     }}
-                    style={{ color: infoColor }}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono-tech hover:underline cursor-pointer"
+                    className="border p-5 space-y-3"
                   >
-                    {copiedPayload ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy JSON</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <pre
-                  style={{
-                    backgroundColor: theme.bgInput,
-                    borderColor: theme.border,
-                    color: theme.textSecondary,
-                  }}
-                  className="text-[11px] font-mono-tech overflow-x-auto max-h-60 p-3 border"
-                >
-                  {JSON.stringify(submittedRecord.payload, null, 2)}
-                </pre>
-              </div>
+                    <div
+                      style={{ color: infoColor }}
+                      className="flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider"
+                    >
+                      <FileCheck2 className="w-4 h-4" aria-hidden="true" />
+                      <span>Quote Reference</span>
+                    </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={onResetQuote}
-                  style={{
-                    backgroundColor: theme.bgSurface,
-                    borderColor: theme.borderStrong,
-                    color: theme.textPrimary,
-                  }}
-                  className="rounded-xs border px-4 py-2.5 text-xs font-semibold cursor-pointer"
-                >
-                  Start new fleet quote
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
-                  className="rounded-xs px-5 py-2.5 text-xs font-semibold cursor-pointer"
-                >
-                  Return to showroom
-                </button>
-              </div>
-            </div>
+                    <h3 className="font-display text-xl font-bold">
+                      Quote request submitted
+                    </h3>
+
+                    <div
+                      data-testid="rfq-quote-id"
+                      style={{
+                        backgroundColor: theme.bgInput,
+                        borderColor: theme.border,
+                        color: theme.textPrimary,
+                      }}
+                      className="inline-block border px-3 py-1.5 font-mono-tech text-sm font-semibold tracking-wider"
+                    >
+                      {submittedRecord.quoteId}
+                    </div>
+
+                    <p
+                      data-testid="rfq-summary"
+                      style={{ color: theme.textPrimary }}
+                      className="text-xs font-mono-tech pt-1"
+                    >
+                      {summaryLine}
+                    </p>
+
+                    <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
+                      Our team will follow up with a formal fleet quote. Demonstration storefront —
+                      no real order has been placed.
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      backgroundColor: theme.bgSurface,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-2"
+                  >
+                    <div
+                      style={{ color: infoColor }}
+                      className="text-xs font-mono-tech uppercase tracking-wider"
+                    >
+                      Submitted Contact Details
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span style={{ color: theme.textMuted }}>Name: </span>
+                        <span>{submittedContact.fullName || contact.fullName}</span>
+                      </div>
+                      <div>
+                        <span style={{ color: theme.textMuted }}>Company: </span>
+                        <span>{submittedContact.companyName || contact.companyName}</span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span style={{ color: theme.textMuted }}>Email: </span>
+                        <span>{submittedContact.workEmail || contact.workEmail}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buyer Policies Links */}
+                  <div
+                    style={{
+                      backgroundColor: theme.bgElevated,
+                      borderColor: theme.border,
+                    }}
+                    className="border p-4 space-y-2"
+                  >
+                    <div
+                      style={{ color: theme.textSecondary }}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech uppercase tracking-wider"
+                    >
+                      <ShieldCheck
+                        style={{ color: infoColor }}
+                        className="w-3.5 h-3.5"
+                        aria-hidden="true"
+                      />
+                      <span>Buyer Policies (Sample Demo Terms)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                      {storefront.policies.map((pol) => (
+                        <button
+                          key={pol.id}
+                          type="button"
+                          onClick={() => onOpenPolicy(pol)}
+                          style={{ color: infoColor }}
+                          className="hover:underline underline-offset-4 cursor-pointer"
+                        >
+                          {pol.title}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={onResetQuote}
+                      data-testid="start-new-quote-btn"
+                      style={{
+                        backgroundColor: theme.bgSurface,
+                        borderColor: theme.borderStrong,
+                        color: theme.textPrimary,
+                      }}
+                      className="rounded-xs border px-4 py-2.5 text-xs font-semibold cursor-pointer"
+                    >
+                      Start a new quote
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                      className="rounded-xs px-5 py-2.5 text-xs font-semibold cursor-pointer"
+                    >
+                      Return to showroom
+                    </button>
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <>
               {/* STEP 01 OF 03: DEPLOYMENT */}
@@ -1956,19 +2015,6 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     </div>
                   </div>
 
-                  {submitError && (
-                    <div
-                      role="alert"
-                      style={{
-                        backgroundColor: theme.badgeWarnBg,
-                        borderColor: theme.badgeWarnBorder,
-                        color: theme.badgeWarnText,
-                      }}
-                      className="border p-3 text-xs"
-                    >
-                      {submitError}
-                    </div>
-                  )}
                 </div>
               )}
             </>
@@ -2044,13 +2090,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 </button>
                 <button
                   type="button"
-                  disabled={isSubmitting}
                   onClick={handleSubmitRfq}
                   data-testid="submit-rfq-btn"
                   style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
-                  className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
                 >
-                  <span>{isSubmitting ? 'Submitting...' : 'Submit RFQ'}</span>
+                  <span>Submit RFQ</span>
                 </button>
               </>
             )}

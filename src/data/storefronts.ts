@@ -952,7 +952,7 @@ export const STOREFRONTS: Record<StorefrontId, StorefrontConfig> = {
       badgeWarnText: '#F59E0B',
       headerBg: 'rgba(8, 13, 21, 0.96)',
       heroScrimClass:
-        'bg-gradient-to-r from-[#060B13]/95 via-[#08101C]/72 to-transparent',
+        'bg-gradient-to-r from-[#060B13]/85 via-[#060B13]/40 via-28% to-transparent',
     },
   },
 
@@ -1129,7 +1129,7 @@ export const STOREFRONTS: Record<StorefrontId, StorefrontConfig> = {
       badgeWarnText: '#B45309',
       headerBg: 'rgba(255, 255, 255, 0.96)',
       heroScrimClass:
-        'bg-gradient-to-r from-[#F4F7FA] via-[#F4F7FA]/90 via-40% to-transparent',
+        'bg-gradient-to-r from-[#F4F7FA]/75 via-[#F4F7FA]/25 via-22% to-transparent',
     },
   },
 
@@ -1308,7 +1308,7 @@ export const STOREFRONTS: Record<StorefrontId, StorefrontConfig> = {
       badgeWarnText: '#FBBF24',
       headerBg: 'rgba(11, 17, 15, 0.96)',
       heroScrimClass:
-        'bg-gradient-to-r from-[#090E0C]/96 via-[#0C1310]/80 via-40% to-transparent',
+        'bg-gradient-to-r from-[#080E0C]/78 via-[#080E0C]/35 via-28% to-transparent',
     },
   },
 
@@ -1491,7 +1491,7 @@ export const STOREFRONTS: Record<StorefrontId, StorefrontConfig> = {
       badgeWarnText: '#FB923C',
       headerBg: 'rgba(18, 20, 23, 0.96)',
       heroScrimClass:
-        'bg-gradient-to-r from-[#111316]/95 via-[#131518]/80 via-40% to-transparent',
+        'bg-gradient-to-r from-[#111316]/82 via-[#111316]/42 via-28% to-transparent',
     },
   },
 };
