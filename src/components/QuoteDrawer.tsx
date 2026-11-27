@@ -413,12 +413,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       };
     });
 
+    const storefrontCodeMap: Record<StorefrontId, string> = {
+      astrateq: 'AST',
+      northlink: 'NLT',
+      voltdepot: 'VDS',
+      truenorth: 'TNU',
+    };
+
     const createdAt = new Date().toISOString();
     const payload = {
       idempotencyKey: draftIdempotencyKey,
       createdAt,
       currency: clientConfig.currency,
       storefrontId: storefront.id,
+      storefrontCode: storefrontCodeMap[storefront.id],
       brand: storefront.brandName,
       hardwareLines: computedLines,
       installationCoordinationRequested: installationRequested,
@@ -458,6 +466,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       if (!response.ok) {
         const serverError =
           responseData && typeof responseData.error === 'string' ? responseData.error : null;
+        const preservedQuoteId =
+          responseData && typeof responseData.quoteId === 'string' && responseData.quoteId.trim()
+            ? responseData.quoteId.trim()
+            : null;
         if (response.status === 404 && !externalWebhook) {
           throw new Error(
             'Submission failed (HTTP 404): the /api/rfq intake endpoint is not available in this deployment. Your entered quote data has been preserved.'
@@ -465,20 +477,27 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
         }
         throw new Error(
           serverError
-            ? `${serverError} Your entered quote data has been preserved.`
+            ? `${serverError}${preservedQuoteId ? ` (Saved reference: ${preservedQuoteId})` : ''} Your entered quote data has been preserved.`
             : `Submission failed (HTTP ${response.status}). Your entered quote data has been preserved.`
         );
       }
 
       if (!externalWebhook) {
+        const emailMeta =
+          responseData &&
+          typeof responseData.emailDelivery === 'object' &&
+          responseData.emailDelivery !== null
+            ? (responseData.emailDelivery as { delivered?: unknown })
+            : null;
         if (
           !responseData ||
           responseData.ok !== true ||
           typeof responseData.quoteId !== 'string' ||
-          !responseData.quoteId.trim()
+          !responseData.quoteId.trim() ||
+          emailMeta?.delivered !== true
         ) {
           throw new Error(
-            'Intake server returned an incomplete response without a server-generated reference ID. Your entered quote data has been preserved.'
+            'Intake server did not confirm email provider acceptance with a quote reference. Your entered quote data has been preserved.'
           );
         }
       }
@@ -2576,6 +2595,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   type="button"
                   onClick={handleSubmitRfq}
                   disabled={isSubmitting}
+                  aria-busy={isSubmitting}
                   data-testid="submit-rfq-btn"
                   style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
                   className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"

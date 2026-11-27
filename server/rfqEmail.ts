@@ -95,11 +95,65 @@ export function maskEmail(email: string): string {
   return `${local[0]}${'*'.repeat(Math.min(5, local.length - 1))}@${domain}`;
 }
 
-export function getEmailRoutingConfig(): EmailRoutingConfig {
-  const supplierBrand = process.env.RFQ_SUPPLIER_BRAND?.trim() || 'Astrateq Gadgets';
+export interface StorefrontRoutingMeta {
+  id: 'astrateq' | 'northlink' | 'voltdepot' | 'truenorth';
+  code: 'AST' | 'NLT' | 'VDS' | 'TNU';
+  brand: string;
+  recipientEnvVar: string;
+}
+
+export const STOREFRONT_ROUTING_MAP: Record<string, StorefrontRoutingMeta> = {
+  astrateq: {
+    id: 'astrateq',
+    code: 'AST',
+    brand: 'Astrateq Gadgets',
+    recipientEnvVar: 'RFQ_RECIPIENT_ASTRATEQ',
+  },
+  northlink: {
+    id: 'northlink',
+    code: 'NLT',
+    brand: 'NorthLink Telematics',
+    recipientEnvVar: 'RFQ_RECIPIENT_NORTHLINK',
+  },
+  voltdepot: {
+    id: 'voltdepot',
+    code: 'VDS',
+    brand: 'VoltDepot Systems',
+    recipientEnvVar: 'RFQ_RECIPIENT_VOLTDEPOT',
+  },
+  truenorth: {
+    id: 'truenorth',
+    code: 'TNU',
+    brand: 'TrueNorth Upfitting',
+    recipientEnvVar: 'RFQ_RECIPIENT_TRUENORTH',
+  },
+};
+
+export function resolveStorefrontRoutingMeta(
+  storefrontIdOrCode?: string
+): StorefrontRoutingMeta {
+  const normalized = (storefrontIdOrCode || 'astrateq').trim().toLowerCase();
+  for (const meta of Object.values(STOREFRONT_ROUTING_MAP)) {
+    if (meta.id === normalized || meta.code.toLowerCase() === normalized) {
+      return meta;
+    }
+  }
+  return STOREFRONT_ROUTING_MAP.astrateq;
+}
+
+export function getEmailRoutingConfig(storefrontIdOrCode?: string): EmailRoutingConfig {
+  const meta = resolveStorefrontRoutingMeta(storefrontIdOrCode);
+  const supplierBrand =
+    meta.id === 'astrateq'
+      ? process.env.RFQ_SUPPLIER_BRAND?.trim() || meta.brand
+      : meta.brand;
   const pilotStorefrontId =
-    process.env.RFQ_PILOT_STOREFRONT_ID?.trim().toLowerCase() || 'astrateq';
-  const recipientEmail = process.env.RFQ_RECIPIENT_EMAIL?.trim() || '';
+    process.env.RFQ_PILOT_STOREFRONT_ID?.trim().toLowerCase() || meta.id;
+
+  const storefrontSpecificRecipient = process.env[meta.recipientEnvVar]?.trim() || '';
+  const sharedFallbackRecipient = process.env.RFQ_RECIPIENT_EMAIL?.trim() || '';
+  const recipientEmail = storefrontSpecificRecipient || sharedFallbackRecipient;
+
   const smtpHost = process.env.SMTP_HOST?.trim() || '';
   const smtpPortRaw = Number(process.env.SMTP_PORT || '587');
   const smtpPort = Number.isFinite(smtpPortRaw) && smtpPortRaw > 0 ? smtpPortRaw : 587;
@@ -108,7 +162,7 @@ export function getEmailRoutingConfig(): EmailRoutingConfig {
   const smtpPass = process.env.SMTP_PASS || '';
   const resendApiKey = process.env.RESEND_API_KEY?.trim() || '';
   const fromEmail = process.env.RFQ_FROM_EMAIL?.trim() || smtpUser || '';
-  const requireEmailDelivery = process.env.RFQ_REQUIRE_EMAIL_DELIVERY === 'true';
+  const requireEmailDelivery = process.env.RFQ_REQUIRE_EMAIL_DELIVERY !== 'false';
   const timeoutRaw = Number(process.env.EMAIL_TIMEOUT_MS || '10000');
   const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw >= 1000 ? timeoutRaw : 10000;
 
@@ -126,15 +180,15 @@ export function getEmailRoutingConfig(): EmailRoutingConfig {
 
   const missingConfig: string[] = [];
   if (!recipientEmail || !EMAIL_RE.test(recipientEmail)) {
-    missingConfig.push('RFQ_RECIPIENT_EMAIL');
+    missingConfig.push(meta.recipientEnvVar);
   }
   if (!fromEmail || !EMAIL_RE.test(fromEmail)) {
     missingConfig.push('RFQ_FROM_EMAIL');
   }
 
   if (mode === 'unconfigured') {
-    missingConfig.push('EMAIL_DELIVERY_MODE (smtp or resend)');
-    missingConfig.push('SMTP_HOST or RESEND_API_KEY');
+    missingConfig.push('EMAIL_DELIVERY_MODE (resend or smtp)');
+    missingConfig.push('RESEND_API_KEY or SMTP_HOST');
   } else if (mode === 'smtp') {
     if (!smtpHost) {
       missingConfig.push('SMTP_HOST');
@@ -258,11 +312,30 @@ export function buildRfqEmailContent(
     });
   }
 
+  const optionalDeploymentFields: Array<[string, unknown]> = [
+    ['Vehicle Types', deployment.vehicleTypes],
+    ['Tracking Requirements', deployment.trackingRequirements],
+    ['Connectivity Preference', deployment.connectivityPreference],
+    ['Charging Type', deployment.chargingType],
+    ['Charging Bays', deployment.chargingBays],
+    ['Site Conditions', deployment.siteConditions],
+    ['Electrical Service', deployment.electricalService],
+    ['Depot Region', deployment.siteLocation],
+    ['Upfitting Hub', deployment.upfitLocation],
+    ['Vehicle Use', deployment.vehicleUse],
+    ['Required Equipment', deployment.requiredEquipment],
+  ];
+
   textLines.push(
     `Installation Preference : ${String(deployment.installationPreference ?? 'Not specified')}`,
     `Fleet Size              : ${String(deployment.fleetSize ?? 'Not specified')}`,
     `Rollout Timeline        : ${String(deployment.rolloutTimeline ?? 'Not specified')}`
   );
+  for (const [label, val] of optionalDeploymentFields) {
+    if (typeof val === 'string' && val.trim()) {
+      textLines.push(`${label.padEnd(24)}: ${val.trim()}`);
+    }
+  }
   if (typeof deployment.additionalEquipmentNotes === 'string' && deployment.additionalEquipmentNotes.trim()) {
     textLines.push(`Additional Equip Notes  : ${deployment.additionalEquipmentNotes.trim()}`);
   }
@@ -341,6 +414,13 @@ export function buildRfqEmailContent(
       <h2 style="font-size:14px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">2. Vehicle &amp; Deployment Requirements</h2>
       ${vehicleRowsHtml}
       <p style="font-size:13px;margin:6px 0;"><strong>Installation Preference:</strong> ${escapeHtml(deployment.installationPreference ?? 'Not specified')} &middot; <strong>Fleet Size:</strong> ${escapeHtml(deployment.fleetSize ?? 'Not specified')} &middot; <strong>Timeline:</strong> ${escapeHtml(deployment.rolloutTimeline ?? 'Not specified')}</p>
+      ${optionalDeploymentFields
+        .filter(([, val]) => typeof val === 'string' && val.trim().length > 0)
+        .map(
+          ([label, val]) =>
+            `<p style="font-size:13px;margin:4px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(val).trim())}</p>`
+        )
+        .join('')}
       ${typeof deployment.additionalEquipmentNotes === 'string' && deployment.additionalEquipmentNotes.trim() ? `<p style="font-size:13px;margin:6px 0 18px;"><strong>Additional Equipment Notes:</strong> ${escapeHtml(deployment.additionalEquipmentNotes.trim())}</p>` : ''}
 
       <h2 style="font-size:14px;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e2e8f0;padding-bottom:6px;margin-top:18px;">3. Buyer Contact Information</h2>
