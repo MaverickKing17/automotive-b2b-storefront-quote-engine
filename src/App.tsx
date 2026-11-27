@@ -246,25 +246,7 @@ export default function App() {
     setQuoteState((prev) => {
       const existing = prev.lineItems.find((item) => item.sku === sku);
       if (existing) {
-        const nextQty = existing.quantity + 1;
-        const oldTier = getTierForQuantity(product, existing.quantity);
-        const newTier = getTierForQuantity(product, nextQty);
-        const tierChanged = oldTier.id !== newTier.id;
-
-        return {
-          ...prev,
-          submittedRecord: null,
-          lineItems: prev.lineItems.map((item) =>
-            item.sku === sku
-              ? {
-                  ...item,
-                  quantity: nextQty,
-                  lastTierChangedFrom: tierChanged ? oldTier.label : item.lastTierChangedFrom,
-                  lastTierChangedTo: tierChanged ? newTier.label : item.lastTierChangedTo,
-                }
-              : item
-          ),
-        };
+        return prev;
       }
 
       return {
@@ -280,24 +262,32 @@ export default function App() {
   const handleUpdateQuantity = (sku: string, nextQty: number) => {
     const product = getProductBySkuForStorefront(storefrontId, sku);
     if (!product) return;
-    const safeQty = Math.max(1, Math.floor(nextQty) || 1);
+    if (!Number.isFinite(nextQty)) return;
+    const safeQty = Math.min(100000, Math.max(1, Math.floor(nextQty)));
 
-    setQuoteState((prev) => ({
-      ...prev,
-      submittedRecord: null,
-      lineItems: prev.lineItems.map((item) => {
-        if (item.sku !== sku) return item;
-        const oldTier = getTierForQuantity(product, item.quantity);
-        const newTier = getTierForQuantity(product, safeQty);
-        const tierChanged = oldTier.id !== newTier.id;
-        return {
-          ...item,
-          quantity: safeQty,
-          lastTierChangedFrom: tierChanged ? oldTier.label : item.lastTierChangedFrom,
-          lastTierChangedTo: tierChanged ? newTier.label : item.lastTierChangedTo,
-        };
-      }),
-    }));
+    setQuoteState((prev) => {
+      const existing = prev.lineItems.find((item) => item.sku === sku);
+      if (!existing || existing.quantity === safeQty) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        submittedRecord: null,
+        lineItems: prev.lineItems.map((item) => {
+          if (item.sku !== sku) return item;
+          const oldTier = getTierForQuantity(product, item.quantity);
+          const newTier = getTierForQuantity(product, safeQty);
+          const tierChanged = oldTier.id !== newTier.id;
+          return {
+            ...item,
+            quantity: safeQty,
+            lastTierChangedFrom: tierChanged ? oldTier.label : item.lastTierChangedFrom,
+            lastTierChangedTo: tierChanged ? newTier.label : item.lastTierChangedTo,
+          };
+        }),
+      };
+    });
   };
 
   const handleRemoveLineItem = (sku: string) => {

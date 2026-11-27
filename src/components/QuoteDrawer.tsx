@@ -133,6 +133,65 @@ function formatSubmittedSummary(
   return parts.join(' · ');
 }
 
+const LineItemQuantityInput: React.FC<{
+  sku: string;
+  quantity: number;
+  onCommitQuantity: (nextQty: number) => void;
+  style: React.CSSProperties;
+}> = ({ sku, quantity, onCommitQuantity, style }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const [draft, setDraft] = useState(String(quantity));
+
+  const displayedValue = isFocused ? draft : String(quantity);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      aria-label={`Quantity for ${sku}`}
+      data-testid={`qty-input-${sku}`}
+      value={displayedValue}
+      onFocus={() => {
+        setIsFocused(true);
+        setDraft(String(quantity));
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+        } else if (e.key === 'Enter') {
+          e.currentTarget.blur();
+        }
+      }}
+      onChange={(e) => {
+        const digitsOnly = e.target.value.replace(/\D/g, '');
+        setDraft(digitsOnly);
+        if (digitsOnly.length > 0) {
+          const parsed = Number.parseInt(digitsOnly, 10);
+          if (Number.isInteger(parsed) && parsed >= 1 && parsed !== quantity) {
+            onCommitQuantity(Math.min(100000, parsed));
+          }
+        }
+      }}
+      onBlur={() => {
+        setIsFocused(false);
+        const parsed = Number.parseInt(draft, 10);
+        if (Number.isInteger(parsed) && parsed >= 1) {
+          const clamped = Math.min(100000, parsed);
+          if (clamped !== quantity) {
+            onCommitQuantity(clamped);
+          }
+          setDraft(String(clamped));
+        } else {
+          setDraft(String(quantity));
+        }
+      }}
+      style={style}
+      className="w-16 h-10 bg-transparent text-center text-sm font-mono-tech border-x"
+    />
+  );
+};
+
 interface QuoteDrawerProps {
   storefront: StorefrontConfig;
   isOpen: boolean;
@@ -1034,36 +1093,33 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                 >
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      onUpdateQuantity(item.sku, Math.max(1, item.quantity - 1))
-                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onUpdateQuantity(item.sku, Math.max(1, item.quantity - 1));
+                                    }}
                                     aria-label={`Decrease quantity of ${product.sku}`}
                                     style={{ color: theme.textSecondary }}
                                     className="w-10 h-10 flex items-center justify-center cursor-pointer"
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    aria-label={`Quantity for ${product.sku}`}
-                                    data-testid={`qty-input-${item.sku}`}
-                                    value={item.quantity}
-                                    onChange={(e) => {
-                                      const parsed = parseInt(e.target.value, 10);
-                                      if (!Number.isNaN(parsed) && parsed >= 1) {
-                                        onUpdateQuantity(item.sku, parsed);
-                                      }
-                                    }}
+                                  <LineItemQuantityInput
+                                    sku={product.sku}
+                                    quantity={item.quantity}
+                                    onCommitQuantity={(nextQty) =>
+                                      onUpdateQuantity(item.sku, nextQty)
+                                    }
                                     style={{
                                       borderColor: theme.borderStrong,
                                       color: theme.textPrimary,
                                     }}
-                                    className="w-16 h-10 bg-transparent text-center text-sm font-mono-tech border-x"
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => onUpdateQuantity(item.sku, item.quantity + 1)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onUpdateQuantity(item.sku, item.quantity + 1);
+                                    }}
                                     aria-label={`Increase quantity of ${product.sku}`}
                                     data-testid={`qty-inc-${item.sku}`}
                                     style={{ color: theme.textSecondary }}
@@ -1194,7 +1250,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         </div>
                         <button
                           type="button"
-                          onClick={() => onAddProduct(recommendedAddonProduct.sku)}
+                          disabled={addonInQuote}
+                          onClick={() => {
+                            if (!addonInQuote) {
+                              onAddProduct(recommendedAddonProduct.sku);
+                            }
+                          }}
                           style={
                             theme.isLight
                               ? {
@@ -1207,10 +1268,14 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   color: theme.accentPrimary,
                                 }
                           }
-                          className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
+                          className="inline-flex items-center gap-1 rounded-xs border px-3 py-1.5 text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default whitespace-nowrap shrink-0"
                         >
-                          <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                          <span>{addonInQuote ? 'Add another' : 'Add'}</span>
+                          {addonInQuote ? (
+                            <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                          ) : (
+                            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                          )}
+                          <span>{addonInQuote ? 'In quote' : 'Add'}</span>
                         </button>
                       </div>
                     )}

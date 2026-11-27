@@ -925,7 +925,7 @@ export const STOREFRONTS: Record<StorefrontId, StorefrontConfig> = {
     ],
     specAssistPlaceholder: 'Ask about 24V dashcams, J1939 gateways, or vehicle fitment...',
     contactInfo: {
-      email: 'fleet@astrateqgadgets.example',
+      email: 'Demo placeholder — supplier contact email pending configuration (RFQs route server-side)',
       phone: 'Demo placeholder — supplier phone pending configuration',
       regionLabel: 'Demo Storefront · Supplier address & distribution hub pending configuration',
     },

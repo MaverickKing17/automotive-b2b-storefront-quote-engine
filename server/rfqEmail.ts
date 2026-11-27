@@ -141,6 +141,11 @@ export function resolveStorefrontRoutingMeta(
   return STOREFRONT_ROUTING_MAP.astrateq;
 }
 
+function isPlaceholderEmail(email: string): boolean {
+  const lower = email.trim().toLowerCase();
+  return lower === 'fleet@astrateqgadgets.example' || lower.endsWith('@astrateqgadgets.example');
+}
+
 export function getEmailRoutingConfig(storefrontIdOrCode?: string): EmailRoutingConfig {
   const meta = resolveStorefrontRoutingMeta(storefrontIdOrCode);
   const supplierBrand =
@@ -151,8 +156,10 @@ export function getEmailRoutingConfig(storefrontIdOrCode?: string): EmailRouting
     process.env.RFQ_PILOT_STOREFRONT_ID?.trim().toLowerCase() || meta.id;
 
   const storefrontSpecificRecipient = process.env[meta.recipientEnvVar]?.trim() || '';
-  const sharedFallbackRecipient = process.env.RFQ_RECIPIENT_EMAIL?.trim() || '';
-  const recipientEmail = storefrontSpecificRecipient || sharedFallbackRecipient;
+  const sharedFallbackRecipient =
+    meta.id === 'astrateq' ? '' : process.env.RFQ_RECIPIENT_EMAIL?.trim() || '';
+  const candidateRecipient = storefrontSpecificRecipient || sharedFallbackRecipient;
+  const recipientEmail = isPlaceholderEmail(candidateRecipient) ? '' : candidateRecipient;
 
   const smtpHost = process.env.SMTP_HOST?.trim() || '';
   const smtpPortRaw = Number(process.env.SMTP_PORT || '587');
@@ -161,7 +168,8 @@ export function getEmailRoutingConfig(storefrontIdOrCode?: string): EmailRouting
   const smtpUser = process.env.SMTP_USER?.trim() || '';
   const smtpPass = process.env.SMTP_PASS || '';
   const resendApiKey = process.env.RESEND_API_KEY?.trim() || '';
-  const fromEmail = process.env.RFQ_FROM_EMAIL?.trim() || smtpUser || '';
+  const rawFromEmail = process.env.RFQ_FROM_EMAIL?.trim() || smtpUser || '';
+  const fromEmail = isPlaceholderEmail(rawFromEmail) ? '' : rawFromEmail;
   const requireEmailDelivery = process.env.RFQ_REQUIRE_EMAIL_DELIVERY !== 'false';
   const timeoutRaw = Number(process.env.EMAIL_TIMEOUT_MS || '10000');
   const timeoutMs = Number.isFinite(timeoutRaw) && timeoutRaw >= 1000 ? timeoutRaw : 10000;
