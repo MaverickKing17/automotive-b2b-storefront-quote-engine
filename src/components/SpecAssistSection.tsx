@@ -70,7 +70,7 @@ export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ 
               style={{ color: infoColor }}
               className="text-xs font-mono-tech uppercase tracking-[0.16em]"
             >
-              04 · Inline Product Copilot
+              04 · Technical &amp; Deployment Reference
             </p>
             <h2
               style={{ color: theme.textPrimary }}
@@ -82,9 +82,9 @@ export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ 
               style={{ color: theme.textSecondary }}
               className="mt-3 text-sm leading-relaxed"
             >
-              Ask specification, CAD tier, or vehicle-fitment questions for{' '}
-              {storefront.brandName}. Answers are generated strictly from published demonstration
-              catalogue data and the vehicle compatibility matrix.
+              Helps you review available {storefront.brandName} product specifications, CAD tier
+              tables, and sample deployment details. Responses are grounded strictly in published
+              demonstration catalogue records and direct unverified items to supplier confirmation.
             </p>
 
             <div className="mt-6">
@@ -133,10 +133,10 @@ export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ 
                 className="inline-flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider font-semibold"
               >
                 <TerminalSquare className="w-4 h-4" aria-hidden="true" />
-                <span>Spec Assist · {storefront.brandTitleMain} Catalog Engine</span>
+                <span>Spec Assist · {storefront.brandTitleMain} Catalog Lookup</span>
               </span>
               <span style={{ color: theme.textMuted }} className="text-[11px] font-mono-tech">
-                Rule-based · Cited SKUs
+                Catalogue Grounded · Cited SKUs
               </span>
             </div>
 
@@ -192,7 +192,7 @@ export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ 
                   borderColor: theme.borderStrong,
                   color: theme.textPrimary,
                 }}
-                className="flex-1 h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
+                className="flex-1 h-11 rounded-xs border px-3.5 text-sm"
               />
               <button
                 type="submit"

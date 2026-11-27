@@ -1,4 +1,4 @@
-export type FitmentStatus = 'verified' | 'requires-verification';
+export type FitmentStatus = 'verified' | 'requires-verification' | 'not-verified';
 
 export type PowerSourceOption =
   | ''
@@ -35,6 +35,7 @@ export interface QuoteLineItem {
 
 export interface VehicleGroup {
   id: string;
+  groupLabel?: string;
   year: string;
   make: string;
   model: string;
@@ -48,6 +49,7 @@ export interface DeploymentAnswers {
   installationPreference: string;
   fleetSize: string;
   rolloutTimeline: string;
+  additionalEquipmentNotes?: string;
   // NorthLink Telematics workflow fields
   vehicleTypes?: string;
   trackingRequirements?: string;
@@ -69,14 +71,17 @@ export interface ContactDetails {
   companyName: string;
   workEmail: string;
   phone: string;
+  provinceOrRegion?: string;
+  projectNotes?: string;
 }
 
 export interface SubmittedRfqRecord {
-  quoteId: string;
+  quoteId?: string;
   idempotencyKey: string;
   submittedAt: string;
-  mode: 'backend-api' | 'webhook' | 'local-demo';
-  webhookStatus?: string;
+  mode: 'backend-api' | 'webhook';
+  deliveryStatus: string;
+  externalDeliveryConfigured: boolean;
   payload: Record<string, unknown>;
 }
 

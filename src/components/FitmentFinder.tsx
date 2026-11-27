@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Car,
   CheckCircle2,
+  HelpCircle,
   Plus,
   Wrench,
 } from 'lucide-react';
@@ -25,8 +26,9 @@ interface FitmentFinderProps {
   storefrontId?: StorefrontId;
   recommendedAddonSku?: string;
   layout?: 'docked-vertical' | 'horizontal-bar';
-  onAttachVehicle: (vehicle: VehicleSelection) => void;
+  onAttachVehicle: (vehicle: VehicleSelection, quantity?: number) => void;
   onAddProduct: (sku: string) => void;
+  onOpenDrawer?: () => void;
   attachedGroupCount: number;
 }
 
@@ -37,12 +39,14 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
   layout = 'docked-vertical',
   onAttachVehicle,
   onAddProduct,
+  onOpenDrawer,
   attachedGroupCount,
 }) => {
   const [year, setYear] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [vehicleClass, setVehicleClass] = useState('');
+  const [vehicleQty, setVehicleQty] = useState(1);
   const [result, setResult] = useState<FitmentEvaluation | null>(null);
   const [attachedNotice, setAttachedNotice] = useState<string | null>(null);
   const [harnessAddedNotice, setHarnessAddedNotice] = useState(false);
@@ -59,7 +63,6 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
     setResult(null);
     setAttachedNotice(null);
     setHarnessAddedNotice(false);
-    setVehicleClass('');
   };
 
   const handleMakeChange = (nextMake: string) => {
@@ -73,7 +76,6 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
 
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
-    setVehicleClass('');
     setResult(null);
     setAttachedNotice(null);
     setHarnessAddedNotice(false);
@@ -97,8 +99,11 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
 
   const handleAttach = () => {
     if (!allFourChosen) return;
-    onAttachVehicle({ year, make, model, vehicleClass });
-    setAttachedNotice(`${year} ${make} ${model} (${vehicleClass}) attached as a vehicle group.`);
+    const safeQty = Math.max(1, Math.floor(vehicleQty) || 1);
+    onAttachVehicle({ year, make, model, vehicleClass }, safeQty);
+    setAttachedNotice(
+      `${safeQty} × ${year} ${make} ${model} (${vehicleClass}) attached as a vehicle group.`
+    );
   };
 
   const targetAddonSku = recommendedAddonSku ?? result?.recommendedHarnessSku;
@@ -438,7 +443,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{result.headlineBadge}</span>
                 </span>
-              ) : (
+              ) : result.status === 'requires-verification' ? (
                 <span
                   style={{
                     backgroundColor: theme.badgeWarnBg,
@@ -450,17 +455,54 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{result.headlineBadge}</span>
                 </span>
+              ) : (
+                <span
+                  style={{
+                    backgroundColor: isHorizontal ? theme.bgElevated : '#152236',
+                    borderColor: theme.borderStrong,
+                    color: theme.textSecondary,
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>{result.headlineBadge}</span>
+                </span>
               )}
               <span style={{ color: theme.textSecondary }} className="text-[11px] font-mono-tech">
                 {year} {make} {model} · {vehicleClass}
               </span>
             </div>
 
-            <p style={{ color: theme.textPrimary }} className="text-xs">
+            <p style={{ color: theme.textPrimary }} className="text-xs leading-relaxed">
               {result.summaryText}
             </p>
 
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5">
+                <label
+                  htmlFor="fitment-qty"
+                  style={{ color: theme.textSecondary }}
+                  className="text-[11px] font-mono-tech uppercase"
+                >
+                  Qty
+                </label>
+                <input
+                  id="fitment-qty"
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={vehicleQty}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(parsed) && parsed >= 1) {
+                      setVehicleQty(parsed);
+                    }
+                  }}
+                  style={selectStyle}
+                  className="w-14 h-8 rounded-md border px-2 text-xs font-mono-tech text-center"
+                />
+              </div>
+
               <button
                 type="button"
                 onClick={handleAttach}
@@ -475,18 +517,30 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
                   className="text-[11px] font-mono-tech"
                 >
-                  Active groups: {attachedGroupCount}
+                  Groups: {attachedGroupCount}
                 </span>
               )}
             </div>
 
             {attachedNotice && (
-              <p
-                style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
-                className="text-[11px] font-mono-tech"
-              >
-                {attachedNotice}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p
+                  style={{ color: theme.isLight ? theme.accentPrimary : theme.accentInfo }}
+                  className="text-[11px] font-mono-tech"
+                >
+                  {attachedNotice}
+                </p>
+                {onOpenDrawer && (
+                  <button
+                    type="button"
+                    onClick={onOpenDrawer}
+                    style={{ color: theme.textPrimary }}
+                    className="text-[11px] font-semibold underline underline-offset-4 cursor-pointer"
+                  >
+                    Review in quote →
+                  </button>
+                )}
+              </div>
             )}
 
             {recommendedHarness && (

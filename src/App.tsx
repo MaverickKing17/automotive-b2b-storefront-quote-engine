@@ -55,6 +55,7 @@ const createInitialQuoteState = (storefrontId: StorefrontId): PersistedQuoteStat
             ? cfg.chargingOptions.fleetSizes[1]
             : clientConfig.deploymentOptions.fleetSizes[0],
       rolloutTimeline: clientConfig.deploymentOptions.rolloutTimelines[0],
+      additionalEquipmentNotes: '',
       vehicleTypes: cfg.northlinkOptions?.vehicleTypes[0],
       trackingRequirements: cfg.northlinkOptions?.trackingRequirements[0],
       connectivityPreference: cfg.northlinkOptions?.connectivityPreferences[0],
@@ -72,11 +73,27 @@ const createInitialQuoteState = (storefrontId: StorefrontId): PersistedQuoteStat
       companyName: '',
       workEmail: '',
       phone: '',
+      provinceOrRegion: '',
+      projectNotes: '',
     },
     currentStep: 1,
     submittedRecord: null,
   };
 };
+
+function isValidSubmittedRecord(record: unknown): record is SubmittedRfqRecord {
+  if (!record || typeof record !== 'object') return false;
+  const r = record as Partial<SubmittedRfqRecord>;
+  return (
+    (r.mode === 'backend-api' || r.mode === 'webhook') &&
+    typeof r.idempotencyKey === 'string' &&
+    typeof r.submittedAt === 'string' &&
+    typeof r.deliveryStatus === 'string' &&
+    typeof r.externalDeliveryConfigured === 'boolean' &&
+    typeof r.payload === 'object' &&
+    r.payload !== null
+  );
+}
 
 function loadQuoteState(storefrontId: StorefrontId): PersistedQuoteState {
   try {
@@ -103,11 +120,22 @@ function loadQuoteState(storefrontId: StorefrontId): PersistedQuoteState {
             item.quantity >= 1
         )
       : defaults.lineItems;
+    const filteredVehicleGroups = Array.isArray(parsed.vehicleGroups)
+      ? parsed.vehicleGroups.filter(
+          (g) =>
+            g &&
+            typeof g.id === 'string' &&
+            typeof g.year === 'string' &&
+            typeof g.make === 'string' &&
+            typeof g.model === 'string' &&
+            typeof g.vehicleClass === 'string' &&
+            typeof g.vehicleCount === 'number' &&
+            g.vehicleCount >= 1
+        )
+      : defaults.vehicleGroups;
     return {
       lineItems: filteredLineItems,
-      vehicleGroups: Array.isArray(parsed.vehicleGroups)
-        ? parsed.vehicleGroups
-        : defaults.vehicleGroups,
+      vehicleGroups: filteredVehicleGroups,
       installationRequested: Boolean(parsed.installationRequested),
       deployment: mergedDeployment,
       contact: { ...defaults.contact, ...(parsed.contact ?? {}) },
@@ -115,7 +143,9 @@ function loadQuoteState(storefrontId: StorefrontId): PersistedQuoteState {
         parsed.currentStep === 1 || parsed.currentStep === 2 || parsed.currentStep === 3
           ? parsed.currentStep
           : 1,
-      submittedRecord: parsed.submittedRecord ?? null,
+      submittedRecord: isValidSubmittedRecord(parsed.submittedRecord)
+        ? parsed.submittedRecord
+        : null,
     };
   } catch {
     return createInitialQuoteState(storefrontId);
@@ -281,15 +311,18 @@ export default function App() {
 
   const handleAttachVehicleGroup = (
     vehicle: VehicleSelection,
-    addedFrom: 'finder' | 'manual'
+    addedFrom: 'finder' | 'manual',
+    quantity = 1
   ) => {
+    const safeCount = Math.max(1, Math.floor(quantity) || 1);
     const newGroup: VehicleGroup = {
       id: `vg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      groupLabel: '',
       year: vehicle.year,
       make: vehicle.make,
       model: vehicle.model,
       vehicleClass: vehicle.vehicleClass,
-      vehicleCount: 1,
+      vehicleCount: safeCount,
       powerSource: '',
       addedFrom,
     };
@@ -369,7 +402,7 @@ export default function App() {
           onUpdateDeployment={handleUpdateDeployment}
           onOpenDrawer={() => setDrawerOpen(true)}
           onSetStep={handleSetStep}
-          onAttachVehicle={(vehicle) => handleAttachVehicleGroup(vehicle, 'finder')}
+          onAttachVehicle={(vehicle, qty) => handleAttachVehicleGroup(vehicle, 'finder', qty)}
           onAddProduct={handleAddProduct}
           onSelectCategory={setSelectedCategory}
           attachedGroupCount={quoteState.vehicleGroups.length}
@@ -394,6 +427,7 @@ export default function App() {
           searchQuery={searchQuery}
           onClearSearch={() => setSearchQuery('')}
           lineItems={quoteState.lineItems}
+          vehicleGroups={quoteState.vehicleGroups}
           onAddToQuote={handleAddProduct}
           onViewSpecs={setActiveSpecsProduct}
         />
@@ -409,7 +443,9 @@ export default function App() {
           storefrontId={activeStorefront.id}
           theme={activeStorefront.theme}
           policies={activeStorefront.policies}
+          contactInfo={activeStorefront.contactInfo}
           onOpenPolicy={setActivePolicy}
+          onOpenDrawer={() => setDrawerOpen(true)}
         />
       </main>
 
@@ -422,6 +458,7 @@ export default function App() {
       <ProductSpecsModal
         theme={activeStorefront.theme}
         product={activeSpecsProduct}
+        vehicleGroups={quoteState.vehicleGroups}
         onClose={() => setActiveSpecsProduct(null)}
         onAddToQuote={handleAddProduct}
       />

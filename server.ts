@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,6 +10,13 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, 'data');
 const RFQ_STORE_FILE = path.join(DATA_DIR, 'rfq-submissions.json');
 
+const STOREFRONT_CODE_MAP: Record<string, string> = {
+  astrateq: 'AST',
+  northlink: 'NLT',
+  voltdepot: 'VDS',
+  truenorth: 'TNU',
+};
+
 interface PersistedRfqEntry {
   quoteId: string;
   idempotencyKey: string;
@@ -16,6 +24,19 @@ interface PersistedRfqEntry {
   brand: string;
   persistedAt: string;
   payload: Record<string, unknown>;
+}
+
+function generateUniqueQuoteId(storefrontId: string, existing: PersistedRfqEntry[]): string {
+  const code = STOREFRONT_CODE_MAP[storefrontId] || 'RFQ';
+  const usedIds = new Set(existing.map((e) => e.quoteId));
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const digits = String(crypto.randomInt(100000, 1000000));
+    const candidate = `RFQ-${code}-${digits}`;
+    if (!usedIds.has(candidate)) {
+      return candidate;
+    }
+  }
+  return `RFQ-${code}-${Date.now().toString().slice(-6)}`;
 }
 
 async function readRfqStore(): Promise<PersistedRfqEntry[]> {
@@ -69,16 +90,15 @@ export function createApiApp() {
       return;
     }
 
-    const quoteId = typeof body.quoteId === 'string' ? body.quoteId.trim() : '';
     const idempotencyKey =
-      typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : quoteId;
+      typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : '';
     const storefrontId = typeof body.storefrontId === 'string' ? body.storefrontId.trim() : '';
     const brand = typeof body.brand === 'string' ? body.brand.trim() : '';
     const contact = body.contact as Record<string, unknown> | undefined;
 
-    if (!quoteId || !idempotencyKey || !storefrontId || !brand) {
+    if (!idempotencyKey || !storefrontId || !brand) {
       res.status(400).json({
-        error: 'Missing required RFQ identifiers (quoteId, idempotencyKey, storefrontId, brand).',
+        error: 'Missing required RFQ identifiers (idempotencyKey, storefrontId, brand).',
       });
       return;
     }
@@ -95,8 +115,14 @@ export function createApiApp() {
       !contact.phone.trim()
     ) {
       res.status(400).json({
-        error: 'Complete procurement contact details (fullName, companyName, workEmail, phone) are required.',
+        error:
+          'Complete procurement contact details (fullName, companyName, workEmail, phone) are required.',
       });
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.workEmail.trim())) {
+      res.status(400).json({ error: 'A valid business email address is required.' });
       return;
     }
 
@@ -106,7 +132,29 @@ export function createApiApp() {
 
     if (hardwareLines.length === 0 && deploymentGroups.length === 0 && !installationRequested) {
       res.status(400).json({
-        error: 'Include at least one hardware item, deployment group, or installation service.',
+        error: 'Include at least one hardware item, vehicle group, or installation coordination request.',
+      });
+      return;
+    }
+
+    const invalidLine = hardwareLines.some((line) => {
+      if (!line || typeof line !== 'object') return true;
+      const qty = (line as { quantity?: unknown }).quantity;
+      return typeof qty !== 'number' || !Number.isFinite(qty) || qty < 1;
+    });
+    if (invalidLine) {
+      res.status(400).json({ error: 'All hardware line items must have a quantity of at least 1.' });
+      return;
+    }
+
+    const missingPowerSource = deploymentGroups.some((grp) => {
+      if (!grp || typeof grp !== 'object') return true;
+      const ps = (grp as { powerSource?: unknown }).powerSource;
+      return typeof ps !== 'string' || !ps.trim();
+    });
+    if (missingPowerSource) {
+      res.status(400).json({
+        error: 'Every attached vehicle group must specify a vehicle power source.',
       });
       return;
     }
@@ -117,26 +165,40 @@ export function createApiApp() {
       res.status(200).json({
         ok: true,
         deduplicated: true,
+        quoteId: duplicate.quoteId,
         persistedAt: duplicate.persistedAt,
+        storageBackend: 'express-local-json',
+        externalDeliveryConfigured: false,
         record: duplicate,
       });
       return;
     }
+
+    const quoteId = generateUniqueQuoteId(storefrontId, existingEntries);
+    const persistedAt = new Date().toISOString();
+    const storedPayload: Record<string, unknown> = {
+      ...body,
+      quoteId,
+      persistedAt,
+    };
 
     const newEntry: PersistedRfqEntry = {
       quoteId,
       idempotencyKey,
       storefrontId,
       brand,
-      persistedAt: new Date().toISOString(),
-      payload: body,
+      persistedAt,
+      payload: storedPayload,
     };
 
     await writeRfqStore([newEntry, ...existingEntries]);
     res.status(201).json({
       ok: true,
       deduplicated: false,
-      persistedAt: newEntry.persistedAt,
+      quoteId,
+      persistedAt,
+      storageBackend: 'express-local-json',
+      externalDeliveryConfigured: false,
       record: newEntry,
     });
   });

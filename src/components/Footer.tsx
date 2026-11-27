@@ -37,7 +37,7 @@ export const Footer: React.FC<FooterProps> = ({
               >
                 {storefront.brandName}
               </div>
-              <div style={{ color: footerBodyColor }} className="text-xs mt-0.5">
+              <div style={{ color: footerBodyColor }} className="text-xs mt-0.5 break-words">
                 {contactInfo.regionLabel} · {contactInfo.email} · {contactInfo.phone}
               </div>
               <div style={{ color: footerMutedColor }} className="text-xs mt-0.5">
@@ -49,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({
           <nav
             aria-label="Footer navigation"
             style={{ color: footerBodyColor }}
-            className="flex flex-wrap items-center gap-6 text-xs font-medium"
+            className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium"
           >
             <a
               href="#hardware"
@@ -79,7 +79,17 @@ export const Footer: React.FC<FooterProps> = ({
                   : 'hover:opacity-100 opacity-85 transition-opacity'
               }
             >
-              Spec assist
+              Spec Assist
+            </a>
+            <a
+              href="#policies"
+              className={
+                isAstrateq
+                  ? 'hover:text-[#F3F6FA] transition-colors'
+                  : 'hover:opacity-100 opacity-85 transition-opacity'
+              }
+            >
+              Policies &amp; Support
             </a>
             <button
               type="button"
@@ -87,7 +97,7 @@ export const Footer: React.FC<FooterProps> = ({
               style={{ color: theme.accentPrimary }}
               className="font-semibold hover:underline underline-offset-4 cursor-pointer"
             >
-              Contact fleet team
+              Request Fleet Quote
             </button>
           </nav>
         </div>

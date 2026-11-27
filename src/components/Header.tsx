@@ -204,6 +204,8 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-drawer"
             style={{ borderColor: theme.border, color: theme.textPrimary }}
             className="lg:hidden p-2 border rounded-full cursor-pointer"
           >
@@ -215,6 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Nav Drawer */}
       {mobileMenuOpen && (
         <div
+          id="mobile-nav-drawer"
           style={{
             backgroundColor: theme.bgSurface,
             borderColor: theme.border,

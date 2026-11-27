@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   Plus,
@@ -6,6 +6,7 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
+  HelpCircle,
   ArrowLeft,
   ArrowRight,
   Car,
@@ -25,14 +26,48 @@ import {
   getProductBySkuForStorefront,
   type StorefrontConfig,
   type StorefrontId,
+  type StorefrontTheme,
 } from '../data/storefronts';
+import type {
+  ContactDetails,
+  DeploymentAnswers,
+  FitmentStatus,
+  PersistedQuoteState,
+  PowerSourceOption,
+  SubmittedRfqRecord,
+  VehicleGroup,
+  VehicleSelection,
+} from '../types/quote';
 
-const STOREFRONT_QUOTE_CODES: Record<StorefrontId, string> = {
-  astrateq: 'AST',
-  northlink: 'NLT',
-  voltdepot: 'VDS',
-  truenorth: 'TNU',
-};
+function generateDraftKey(storefrontId: StorefrontId): string {
+  const rand =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `rfq-draft-${storefrontId}-${rand}`;
+}
+
+function getFitmentBadgeStyles(status: FitmentStatus, theme: StorefrontTheme) {
+  if (status === 'verified') {
+    return {
+      bg: theme.badgeVerifiedBg,
+      border: theme.badgeVerifiedBorder,
+      text: theme.badgeVerifiedText,
+    };
+  }
+  if (status === 'requires-verification') {
+    return {
+      bg: theme.badgeWarnBg,
+      border: theme.badgeWarnBorder,
+      text: theme.badgeWarnText,
+    };
+  }
+  return {
+    bg: theme.bgElevated,
+    border: theme.borderStrong,
+    text: theme.isLight ? theme.textSecondary : '#D6DDE5',
+  };
+}
 
 function formatSubmittedSummary(
   storefront: StorefrontConfig,
@@ -96,15 +131,6 @@ function formatSubmittedSummary(
 
   return parts.join(' · ');
 }
-import type {
-  ContactDetails,
-  DeploymentAnswers,
-  PersistedQuoteState,
-  PowerSourceOption,
-  SubmittedRfqRecord,
-  VehicleGroup,
-  VehicleSelection,
-} from '../types/quote';
 
 interface QuoteDrawerProps {
   storefront: StorefrontConfig;
@@ -115,7 +141,11 @@ interface QuoteDrawerProps {
   onRemoveLineItem: (sku: string) => void;
   onAddProduct: (sku: string) => void;
   onToggleInstallation: () => void;
-  onAddVehicleGroup: (vehicle: VehicleSelection, addedFrom: 'finder' | 'manual') => void;
+  onAddVehicleGroup: (
+    vehicle: VehicleSelection,
+    addedFrom: 'finder' | 'manual',
+    quantity?: number
+  ) => void;
   onUpdateVehicleGroup: (id: string, patch: Partial<VehicleGroup>) => void;
   onRemoveVehicleGroup: (id: string) => void;
   onUpdateDeployment: (patch: Partial<DeploymentAnswers>) => void;
@@ -150,8 +180,35 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const [manualMake, setManualMake] = useState('');
   const [manualModel, setManualModel] = useState('');
   const [manualClass, setManualClass] = useState('');
+  const [manualQty, setManualQty] = useState(1);
   const [step1Error, setStep1Error] = useState<string | null>(null);
   const [step2Error, setStep2Error] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftIdempotencyKey, setDraftIdempotencyKey] = useState<string>(() =>
+    generateDraftKey(storefront.id)
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    setSubmitError(null);
+    setDraftIdempotencyKey(generateDraftKey(storefront.id));
+  }, [
+    storefront.id,
+    quoteState.lineItems,
+    quoteState.vehicleGroups,
+    quoteState.installationRequested,
+    quoteState.deployment,
+    quoteState.contact,
+  ]);
 
   if (!isOpen) return null;
 
@@ -196,6 +253,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
   const handleManualVehicleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualYear || !manualMake || !manualModel || !manualClass) return;
+    const safeQty = Math.max(1, Math.floor(manualQty) || 1);
     onAddVehicleGroup(
       {
         year: manualYear,
@@ -203,12 +261,14 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
         model: manualModel,
         vehicleClass: manualClass,
       },
-      'manual'
+      'manual',
+      safeQty
     );
     setManualYear('');
     setManualMake('');
     setManualModel('');
     setManualClass('');
+    setManualQty(1);
     setShowManualVehicleForm(false);
     setStep1Error(null);
   };
@@ -243,23 +303,24 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
     if (!fullName || !companyName || !workEmail || !phone) {
       setStep2Error(
-        'All contact fields (Full name, Company name, Work email, and Phone) are required.'
+        'All required contact fields (Full name, Company name, Work email, and Phone) must be completed.'
       );
       return;
     }
 
     const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workEmail);
     if (!emailValid) {
-      setStep2Error('Enter a valid work email address.');
+      setStep2Error('Enter a valid business email address.');
       return;
     }
 
     onSetStep(3);
   };
 
-  const handleSubmitRfq = () => {
-    const randomSixDigits = String(Math.floor(100000 + Math.random() * 900000));
-    const quoteId = `RFQ-${STOREFRONT_QUOTE_CODES[storefront.id]}-${randomSixDigits}`;
+  const handleSubmitRfq = async () => {
+    if (isSubmitting) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
 
     const computedLines = lineItems.map((item) => {
       const product = getProductBySkuForStorefront(storefront.id, item.sku);
@@ -285,6 +346,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       const fitment = evaluateVehicleFitment(group, group.powerSource);
       return {
         id: group.id,
+        groupLabel: group.groupLabel?.trim() || undefined,
         year: group.year,
         make: group.make,
         model: group.model,
@@ -298,8 +360,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
     const createdAt = new Date().toISOString();
     const payload = {
-      quoteId,
-      idempotencyKey: quoteId,
+      idempotencyKey: draftIdempotencyKey,
       createdAt,
       currency: clientConfig.currency,
       storefrontId: storefront.id,
@@ -308,16 +369,107 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       installationCoordinationRequested: installationRequested,
       vehicleGroups: computedGroups,
       deployment,
-      contact,
+      contact: {
+        ...contact,
+        fullName: contact.fullName.trim(),
+        companyName: contact.companyName.trim(),
+        workEmail: contact.workEmail.trim(),
+        phone: contact.phone.trim(),
+        provinceOrRegion: contact.provinceOrRegion?.trim() || '',
+        projectNotes: contact.projectNotes?.trim() || '',
+      },
     };
 
-    onSetSubmittedRecord({
-      quoteId,
-      idempotencyKey: quoteId,
-      submittedAt: createdAt,
-      mode: 'local-demo',
-      payload,
-    });
+    const externalWebhook = clientConfig.webhookUrl.trim();
+    const targetEndpoint = externalWebhook || '/api/rfq';
+
+    try {
+      const response = await fetch(targetEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      let responseData: Record<string, unknown> | null = null;
+      try {
+        responseData = (await response.json()) as Record<string, unknown>;
+      } catch {
+        responseData = null;
+      }
+
+      if (!response.ok) {
+        const serverError =
+          responseData && typeof responseData.error === 'string' ? responseData.error : null;
+        if (response.status === 404 && !externalWebhook) {
+          throw new Error(
+            'Submission failed (HTTP 404): the /api/rfq intake endpoint is not available in this deployment. Your entered quote data has been preserved.'
+          );
+        }
+        throw new Error(
+          serverError
+            ? `${serverError} Your entered quote data has been preserved.`
+            : `Submission failed (HTTP ${response.status}). Your entered quote data has been preserved.`
+        );
+      }
+
+      if (!externalWebhook) {
+        if (
+          !responseData ||
+          responseData.ok !== true ||
+          typeof responseData.quoteId !== 'string' ||
+          !responseData.quoteId.trim()
+        ) {
+          throw new Error(
+            'Intake server returned an incomplete response without a server-generated reference ID. Your entered quote data has been preserved.'
+          );
+        }
+      }
+
+      const returnedQuoteId =
+        responseData && typeof responseData.quoteId === 'string' && responseData.quoteId.trim()
+          ? responseData.quoteId.trim()
+          : undefined;
+      const persistedAt =
+        responseData && typeof responseData.persistedAt === 'string'
+          ? responseData.persistedAt
+          : createdAt;
+      const persistedRecordPayload =
+        responseData &&
+        typeof responseData.record === 'object' &&
+        responseData.record !== null &&
+        'payload' in responseData.record &&
+        typeof (responseData.record as { payload?: unknown }).payload === 'object' &&
+        (responseData.record as { payload?: unknown }).payload !== null
+          ? ((responseData.record as { payload: Record<string, unknown> }).payload)
+          : payload;
+
+      const externalConfigured = Boolean(externalWebhook);
+      onSetSubmittedRecord({
+        quoteId: returnedQuoteId,
+        idempotencyKey: draftIdempotencyKey,
+        submittedAt: persistedAt,
+        mode: externalConfigured ? 'webhook' : 'backend-api',
+        deliveryStatus: externalConfigured
+          ? 'Delivered to configured supplier webhook endpoint.'
+          : 'Persisted on local Express intake server (/api/rfq → data/rfq-submissions.json). External supplier email, CRM, and ERP forwarding are not configured in this demo environment.',
+        externalDeliveryConfigured: externalConfigured,
+        payload: persistedRecordPayload,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to reach the quotation intake server. Your entered quote data has been preserved; please try again.';
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStartNewQuote = () => {
+    setSubmitError(null);
+    setDraftIdempotencyKey(generateDraftKey(storefront.id));
+    onResetQuote();
   };
 
   const pricedSubtotal = lineItems.reduce((sum, item) => {
@@ -360,6 +512,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       aria-modal="true"
       aria-label="Fleet Quote Drawer"
       data-testid="quote-drawer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         style={{
@@ -450,6 +605,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   ? (submittedRecord.payload.contact as Partial<ContactDetails>)
                   : contact;
               const summaryLine = formatSubmittedSummary(storefront, submittedRecord.payload);
+              const isWebhook = submittedRecord.mode === 'webhook';
 
               return (
                 <div className="space-y-5" data-testid="rfq-confirmation">
@@ -465,24 +621,40 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       className="flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider"
                     >
                       <FileCheck2 className="w-4 h-4" aria-hidden="true" />
-                      <span>Quote Reference</span>
+                      <span>
+                        {isWebhook
+                          ? 'Supplier Webhook Delivered'
+                          : 'Intake Server Persistence'}
+                      </span>
                     </div>
 
                     <h3 className="font-display text-xl font-bold">
-                      Quote request submitted
+                      {isWebhook
+                        ? 'Quotation request delivered'
+                        : 'Quotation request recorded on intake server'}
                     </h3>
 
-                    <div
-                      data-testid="rfq-quote-id"
-                      style={{
-                        backgroundColor: theme.bgInput,
-                        borderColor: theme.border,
-                        color: theme.textPrimary,
-                      }}
-                      className="inline-block border px-3 py-1.5 font-mono-tech text-sm font-semibold tracking-wider"
-                    >
-                      {submittedRecord.quoteId}
-                    </div>
+                    {submittedRecord.quoteId && (
+                      <div className="space-y-1">
+                        <div
+                          style={{ color: theme.textMuted }}
+                          className="text-[11px] font-mono-tech uppercase tracking-wider"
+                        >
+                          Server-Generated Quote Reference
+                        </div>
+                        <div
+                          data-testid="rfq-quote-id"
+                          style={{
+                            backgroundColor: theme.bgInput,
+                            borderColor: theme.border,
+                            color: theme.textPrimary,
+                          }}
+                          className="inline-block border px-3 py-1.5 font-mono-tech text-sm font-semibold tracking-wider"
+                        >
+                          {submittedRecord.quoteId}
+                        </div>
+                      </div>
+                    )}
 
                     <p
                       data-testid="rfq-summary"
@@ -492,9 +664,17 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       {summaryLine}
                     </p>
 
-                    <p style={{ color: theme.textSecondary }} className="text-sm leading-relaxed">
-                      Our team will follow up with a formal fleet quote. Demonstration storefront —
-                      no real order has been placed.
+                    <p
+                      data-testid="rfq-delivery-status"
+                      style={{ color: theme.textSecondary }}
+                      className="text-sm leading-relaxed"
+                    >
+                      {submittedRecord.deliveryStatus}
+                    </p>
+
+                    <p style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
+                      Demonstration storefront — no commercial order has been placed and no automated
+                      email dispatch is active without external webhook/SMTP configuration.
                     </p>
                   </div>
 
@@ -520,10 +700,28 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         <span style={{ color: theme.textMuted }}>Company: </span>
                         <span>{submittedContact.companyName || contact.companyName}</span>
                       </div>
-                      <div className="sm:col-span-2">
+                      <div>
                         <span style={{ color: theme.textMuted }}>Email: </span>
                         <span>{submittedContact.workEmail || contact.workEmail}</span>
                       </div>
+                      <div>
+                        <span style={{ color: theme.textMuted }}>Phone: </span>
+                        <span>{submittedContact.phone || contact.phone}</span>
+                      </div>
+                      {(submittedContact.provinceOrRegion || contact.provinceOrRegion) && (
+                        <div className="sm:col-span-2">
+                          <span style={{ color: theme.textMuted }}>Province / Region: </span>
+                          <span>
+                            {submittedContact.provinceOrRegion || contact.provinceOrRegion}
+                          </span>
+                        </div>
+                      )}
+                      {(submittedContact.projectNotes || contact.projectNotes) && (
+                        <div className="sm:col-span-2">
+                          <span style={{ color: theme.textMuted }}>Project notes: </span>
+                          <span>{submittedContact.projectNotes || contact.projectNotes}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -544,7 +742,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         className="w-3.5 h-3.5"
                         aria-hidden="true"
                       />
-                      <span>Buyer Policies (Sample Demo Terms)</span>
+                      <span>Buyer Policies (Demo Placeholders)</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
                       {storefront.policies.map((pol) => (
@@ -564,7 +762,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                     <button
                       type="button"
-                      onClick={onResetQuote}
+                      onClick={handleStartNewQuote}
                       data-testid="start-new-quote-btn"
                       style={{
                         backgroundColor: theme.bgSurface,
@@ -691,7 +889,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                     }
                                     aria-label={`Decrease quantity of ${product.sku}`}
                                     style={{ color: theme.textSecondary }}
-                                    className="w-9 h-9 flex items-center justify-center cursor-pointer"
+                                    className="w-10 h-10 flex items-center justify-center cursor-pointer"
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
@@ -711,7 +909,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                       borderColor: theme.borderStrong,
                                       color: theme.textPrimary,
                                     }}
-                                    className="w-16 h-9 bg-transparent text-center text-sm font-mono-tech focus:outline-none border-x"
+                                    className="w-16 h-10 bg-transparent text-center text-sm font-mono-tech border-x"
                                   />
                                   <button
                                     type="button"
@@ -719,7 +917,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                     aria-label={`Increase quantity of ${product.sku}`}
                                     data-testid={`qty-inc-${item.sku}`}
                                     style={{ color: theme.textSecondary }}
-                                    className="w-9 h-9 flex items-center justify-center cursor-pointer"
+                                    className="w-10 h-10 flex items-center justify-center cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
                                   </button>
@@ -773,20 +971,14 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                       group,
                                       group.powerSource
                                     );
-                                    const isVerified = evalResult.status === 'verified';
+                                    const badge = getFitmentBadgeStyles(evalResult.status, theme);
                                     return (
                                       <div
                                         key={group.id}
                                         style={{
-                                          backgroundColor: isVerified
-                                            ? theme.badgeVerifiedBg
-                                            : theme.badgeWarnBg,
-                                          borderColor: isVerified
-                                            ? theme.badgeVerifiedBorder
-                                            : theme.badgeWarnBorder,
-                                          color: isVerified
-                                            ? theme.badgeVerifiedText
-                                            : theme.badgeWarnText,
+                                          backgroundColor: badge.bg,
+                                          borderColor: badge.border,
+                                          color: badge.text,
                                         }}
                                         className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-tech px-2.5 py-1 border"
                                       >
@@ -794,10 +986,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                           {group.year} {group.make} {group.model}
                                         </span>
                                         <span className="inline-flex items-center gap-1 font-semibold">
-                                          {isVerified ? (
+                                          {evalResult.status === 'verified' ? (
                                             <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                                          ) : (
+                                          ) : evalResult.status === 'requires-verification' ? (
                                             <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                          ) : (
+                                            <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
                                           )}
                                           <span>{evalResult.drawerBadgeText}</span>
                                         </span>
@@ -958,7 +1152,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         >
                           Add Manual Vehicle Group
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <select
                             value={manualYear}
                             onChange={(e) => setManualYear(e.target.value)}
@@ -1018,15 +1212,38 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               </option>
                             ))}
                           </select>
+                          <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+                            <label
+                              htmlFor="manual-vehicle-qty"
+                              style={{ color: theme.textSecondary }}
+                              className="text-[11px] font-mono-tech uppercase"
+                            >
+                              Vehicle qty
+                            </label>
+                            <input
+                              id="manual-vehicle-qty"
+                              type="number"
+                              min={1}
+                              value={manualQty}
+                              onChange={(e) => {
+                                const parsed = parseInt(e.target.value, 10);
+                                if (!Number.isNaN(parsed) && parsed >= 1) {
+                                  setManualQty(parsed);
+                                }
+                              }}
+                              style={inputStyle}
+                              className="w-24 h-10 rounded-xs border px-2.5 text-xs font-mono-tech"
+                            />
+                            <button
+                              type="submit"
+                              disabled={!manualYear || !manualMake || !manualModel || !manualClass}
+                              style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
+                              className="rounded-xs px-4 py-2 text-xs font-semibold disabled:opacity-40 cursor-pointer ml-auto"
+                            >
+                              Add vehicle group
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          type="submit"
-                          disabled={!manualYear || !manualMake || !manualModel || !manualClass}
-                          style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
-                          className="rounded-xs px-4 py-2 text-xs font-semibold disabled:opacity-40 cursor-pointer"
-                        >
-                          Add vehicle group
-                        </button>
                       </form>
                     )}
 
@@ -1046,7 +1263,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <div className="space-y-3">
                         {vehicleGroups.map((group, idx) => {
                           const evalResult = evaluateVehicleFitment(group, group.powerSource);
-                          const isVerified = evalResult.status === 'verified';
+                          const badge = getFitmentBadgeStyles(evalResult.status, theme);
                           return (
                             <div
                               key={group.id}
@@ -1069,6 +1286,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                       className="text-xs font-mono-tech"
                                     >
                                       {group.vehicleClass} · Group {idx + 1}
+                                      {group.groupLabel?.trim() ? ` · ${group.groupLabel.trim()}` : ''}
                                     </div>
                                   </div>
                                 </div>
@@ -1086,27 +1304,44 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               <div
                                 data-testid={`vehicle-group-status-${idx}`}
                                 style={{
-                                  backgroundColor: isVerified
-                                    ? theme.badgeVerifiedBg
-                                    : theme.badgeWarnBg,
-                                  borderColor: isVerified
-                                    ? theme.badgeVerifiedBorder
-                                    : theme.badgeWarnBorder,
-                                  color: isVerified
-                                    ? theme.badgeVerifiedText
-                                    : theme.badgeWarnText,
+                                  backgroundColor: badge.bg,
+                                  borderColor: badge.border,
+                                  color: badge.text,
                                 }}
                                 className="inline-flex items-center gap-1.5 text-xs font-mono-tech px-2.5 py-1 border"
                               >
-                                {isVerified ? (
+                                {evalResult.status === 'verified' ? (
                                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                                ) : (
+                                ) : evalResult.status === 'requires-verification' ? (
                                   <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                ) : (
+                                  <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
                                 )}
                                 <span>{evalResult.drawerBadgeText}</span>
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <div className="sm:col-span-2">
+                                  <label
+                                    htmlFor={`group-label-${group.id}`}
+                                    style={{ color: theme.textSecondary }}
+                                    className="block text-[11px] font-mono-tech uppercase mb-1"
+                                  >
+                                    Deployment group label (optional)
+                                  </label>
+                                  <input
+                                    id={`group-label-${group.id}`}
+                                    type="text"
+                                    value={group.groupLabel ?? ''}
+                                    onChange={(e) =>
+                                      onUpdateVehicleGroup(group.id, { groupLabel: e.target.value })
+                                    }
+                                    placeholder="e.g. Ontario Corridor Delivery Vans"
+                                    style={inputStyle}
+                                    className="w-full h-10 rounded-xs border px-3 text-xs"
+                                  />
+                                </div>
+
                                 <div>
                                   <label
                                     htmlFor={`group-count-${group.id}`}
@@ -1127,7 +1362,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                       }
                                     }}
                                     style={inputStyle}
-                                    className="w-full h-10 rounded-xs border px-3 text-sm font-mono-tech focus:outline-none"
+                                    className="w-full h-10 rounded-xs border px-3 text-sm font-mono-tech"
                                   />
                                 </div>
 
@@ -1149,7 +1384,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                       })
                                     }
                                     style={inputStyle}
-                                    className="w-full h-10 rounded-xs border px-3 text-sm focus:outline-none"
+                                    className="w-full h-10 rounded-xs border px-3 text-sm"
                                   >
                                     <option value="">Select power source...</option>
                                     {clientConfig.deploymentOptions.powerSources.map((opt) => (
@@ -1557,6 +1792,27 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         )}
                       </div>
                     )}
+
+                    <div>
+                      <label
+                        htmlFor="deploy-equipment-notes"
+                        style={{ color: theme.textSecondary }}
+                        className="block text-[11px] font-mono-tech uppercase mb-1"
+                      >
+                        Additional equipment or accessory notes (optional)
+                      </label>
+                      <textarea
+                        id="deploy-equipment-notes"
+                        rows={2}
+                        value={deployment.additionalEquipmentNotes ?? ''}
+                        onChange={(e) =>
+                          onUpdateDeployment({ additionalEquipmentNotes: e.target.value })
+                        }
+                        placeholder="Specify custom mounting brackets, harness pinouts, telematics sensors, or multi-depot split requirements..."
+                        style={inputStyle}
+                        className="w-full rounded-xs border px-3 py-2 text-xs leading-relaxed"
+                      />
+                    </div>
                   </div>
 
                   {step1Error && (
@@ -1604,7 +1860,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         onChange={(e) => onUpdateContact({ fullName: e.target.value })}
                         placeholder="Jordan Alvarez"
                         style={inputStyle}
-                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm"
                       />
                     </div>
 
@@ -1624,47 +1880,92 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         onChange={(e) => onUpdateContact({ companyName: e.target.value })}
                         placeholder="Northern Corridor Logistics Ltd."
                         style={inputStyle}
-                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          htmlFor="contact-email"
+                          style={{ color: theme.textSecondary }}
+                          className="block text-xs font-mono-tech uppercase mb-1.5"
+                        >
+                          Work email *
+                        </label>
+                        <input
+                          id="contact-email"
+                          type="email"
+                          required
+                          value={contact.workEmail}
+                          onChange={(e) => onUpdateContact({ workEmail: e.target.value })}
+                          placeholder="j.alvarez@corridorlogistics.ca"
+                          style={inputStyle}
+                          className="w-full h-11 rounded-xs border px-3.5 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="contact-phone"
+                          style={{ color: theme.textSecondary }}
+                          className="block text-xs font-mono-tech uppercase mb-1.5"
+                        >
+                          Phone *
+                        </label>
+                        <input
+                          id="contact-phone"
+                          type="tel"
+                          required
+                          value={contact.phone}
+                          onChange={(e) => onUpdateContact({ phone: e.target.value })}
+                          placeholder="+1 (416) 555-0148"
+                          style={inputStyle}
+                          className="w-full h-11 rounded-xs border px-3.5 text-sm"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <label
-                        htmlFor="contact-email"
+                        htmlFor="contact-region"
                         style={{ color: theme.textSecondary }}
                         className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
-                        Work email *
+                        Province or region (optional)
                       </label>
-                      <input
-                        id="contact-email"
-                        type="email"
-                        required
-                        value={contact.workEmail}
-                        onChange={(e) => onUpdateContact({ workEmail: e.target.value })}
-                        placeholder="j.alvarez@corridorlogistics.ca"
+                      <select
+                        id="contact-region"
+                        value={contact.provinceOrRegion ?? ''}
+                        onChange={(e) => onUpdateContact({ provinceOrRegion: e.target.value })}
                         style={inputStyle}
-                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
-                      />
+                        className="w-full h-11 rounded-xs border px-3.5 text-sm"
+                      >
+                        <option value="">Select province or region...</option>
+                        {clientConfig.deploymentOptions.provincesAndRegions.map((reg) => (
+                          <option key={reg} value={reg}>
+                            {reg}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
                       <label
-                        htmlFor="contact-phone"
+                        htmlFor="contact-project-notes"
                         style={{ color: theme.textSecondary }}
                         className="block text-xs font-mono-tech uppercase mb-1.5"
                       >
-                        Phone *
+                        Additional project information (optional)
                       </label>
-                      <input
-                        id="contact-phone"
-                        type="tel"
-                        required
-                        value={contact.phone}
-                        onChange={(e) => onUpdateContact({ phone: e.target.value })}
-                        placeholder="+1 (416) 555-0148"
+                      <textarea
+                        id="contact-project-notes"
+                        rows={3}
+                        value={contact.projectNotes ?? ''}
+                        onChange={(e) => onUpdateContact({ projectNotes: e.target.value })}
+                        placeholder="Delivery sites, fleet rollout windows, PO requirements, or installer coordination notes..."
                         style={inputStyle}
-                        className="w-full h-11 rounded-xs border px-3.5 text-sm focus:outline-none"
+                        className="w-full rounded-xs border px-3.5 py-2.5 text-sm leading-relaxed"
                       />
                     </div>
                   </div>
@@ -1790,7 +2091,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       <div className="space-y-2">
                         {vehicleGroups.map((group) => {
                           const evalResult = evaluateVehicleFitment(group, group.powerSource);
-                          const isVerified = evalResult.status === 'verified';
+                          const badge = getFitmentBadgeStyles(evalResult.status, theme);
                           return (
                             <div
                               key={group.id}
@@ -1803,6 +2104,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-semibold">
                                   {group.year} {group.make} {group.model} ({group.vehicleClass})
+                                  {group.groupLabel?.trim() ? ` — ${group.groupLabel.trim()}` : ''}
                                 </span>
                                 <span
                                   style={{ color: theme.textSecondary }}
@@ -1819,17 +2121,15 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                 <span style={{ color: theme.textPrimary }}>{group.powerSource}</span>
                               </div>
                               <div
-                                style={{
-                                  color: isVerified
-                                    ? theme.badgeVerifiedText
-                                    : theme.badgeWarnText,
-                                }}
+                                style={{ color: badge.text }}
                                 className="inline-flex items-center gap-1.5 font-mono-tech text-[11px]"
                               >
-                                {isVerified ? (
+                                {evalResult.status === 'verified' ? (
                                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                                ) : (
+                                ) : evalResult.status === 'requires-verification' ? (
                                   <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                ) : (
+                                  <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
                                 )}
                                 <span>{evalResult.drawerBadgeText}</span>
                               </div>
@@ -1949,6 +2249,18 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         </>
                       )}
                     </div>
+
+                    {deployment.additionalEquipmentNotes?.trim() && (
+                      <div
+                        style={{ borderColor: theme.border }}
+                        className="border-t pt-2.5 text-xs"
+                      >
+                        <div style={{ color: theme.textMuted }}>
+                          Additional equipment / accessory notes
+                        </div>
+                        <div className="mt-0.5">{deployment.additionalEquipmentNotes.trim()}</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* (03) Contact Details */}
@@ -1982,6 +2294,18 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         <span style={{ color: theme.textMuted }}>Phone: </span>
                         <span>{contact.phone}</span>
                       </div>
+                      {contact.provinceOrRegion?.trim() && (
+                        <div className="sm:col-span-2">
+                          <span style={{ color: theme.textMuted }}>Province / Region: </span>
+                          <span>{contact.provinceOrRegion.trim()}</span>
+                        </div>
+                      )}
+                      {contact.projectNotes?.trim() && (
+                        <div className="sm:col-span-2">
+                          <span style={{ color: theme.textMuted }}>Project information: </span>
+                          <span>{contact.projectNotes.trim()}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1998,7 +2322,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech uppercase tracking-wider"
                     >
                       <ShieldCheck style={{ color: infoColor }} className="w-3.5 h-3.5" aria-hidden="true" />
-                      <span>Buyer Policies (Sample Demo Terms)</span>
+                      <span>Buyer Policies (Demo Placeholders)</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
                       {storefront.policies.map((pol) => (
@@ -2015,6 +2339,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     </div>
                   </div>
 
+                  {submitError && (
+                    <div
+                      role="alert"
+                      data-testid="rfq-submit-error"
+                      style={{
+                        backgroundColor: theme.badgeWarnBg,
+                        borderColor: theme.badgeWarnBorder,
+                        color: theme.badgeWarnText,
+                      }}
+                      className="border p-3.5 text-xs leading-relaxed"
+                    >
+                      {submitError}
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -2082,8 +2420,9 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 <button
                   type="button"
                   onClick={() => onSetStep(2)}
+                  disabled={isSubmitting}
                   style={{ color: theme.textSecondary }}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-40"
                 >
                   <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                   <span>Edit Contact</span>
@@ -2091,11 +2430,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmitRfq}
+                  disabled={isSubmitting}
                   data-testid="submit-rfq-btn"
                   style={{ backgroundColor: theme.ctaBg, color: theme.ctaText }}
-                  className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xs px-6 py-2.5 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
                 >
-                  <span>Submit RFQ</span>
+                  <span>{isSubmitting ? 'Submitting...' : 'Submit Quotation Request'}</span>
                 </button>
               </>
             )}

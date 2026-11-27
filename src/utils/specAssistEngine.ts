@@ -33,34 +33,41 @@ function isSpecOnlyTruckQuery(query: string): boolean {
   return !hasSpecificVehicleMakeOrModel && hasCategoryOrSpecIntent;
 }
 
-function matchesVerifiedMatrixEntry(
+function matchesMatrixEntry(
   query: string,
   catalog: CatalogProduct[]
 ): {
-  matched: boolean;
+  entry?: (typeof clientConfig.compatibilityMatrix)[number];
   product?: CatalogProduct;
 } {
   const q = normalizeText(query);
 
-  const verifiedEntries = clientConfig.compatibilityMatrix.filter(
-    (entry) => entry.status === 'verified'
-  );
-
-  for (const entry of verifiedEntries) {
+  for (const entry of clientConfig.compatibilityMatrix) {
     const hasYear = q.includes(normalizeText(entry.year));
     const hasMake = q.includes(normalizeText(entry.make));
     const hasModel = q.includes(normalizeText(entry.model));
-    const hasClass = q.includes(normalizeText(entry.vehicleClass));
+    const normalizedClass = normalizeText(entry.vehicleClass);
+    const mentionedOtherClass = clientConfig.fitmentOptions.vehicleClasses.some((vc) => {
+      const n = normalizeText(vc);
+      return n !== normalizedClass && q.includes(n);
+    });
 
-    if (hasYear && hasMake && hasModel && hasClass) {
+    if (hasYear && hasMake && hasModel && !mentionedOtherClass) {
       const mentionedProduct = catalog.find(
         (p) => q.includes(p.sku.toLowerCase()) || q.includes(p.name.toLowerCase())
       );
-      return { matched: true, product: mentionedProduct };
+      return { entry, product: mentionedProduct };
     }
   }
 
-  return { matched: false };
+  return {};
+}
+
+function isUnavailableMetadataQuery(query: string): boolean {
+  const q = normalizeText(query);
+  return /\b(stock|inventory|in stock|lead time|delivery date|manufacturer|oem|certif|ul listed|fcc|ce|iso|install step|wiring diagram|pinout)\b/i.test(
+    q
+  );
 }
 
 function findMatchingProducts(query: string, catalog: CatalogProduct[]): CatalogProduct[] {
@@ -146,34 +153,67 @@ export function answerSpecAssistQuestion(
     (FITMENT_INTENT_PATTERN.test(query) || VEHICLE_MENTION_PATTERN.test(query));
 
   if (isFitmentQuery) {
-    const verifiedCheck = matchesVerifiedMatrixEntry(query, catalog);
-    if (verifiedCheck.matched) {
-      const targetProduct = verifiedCheck.product ?? catalog[0];
+    const matrixResult = matchesMatrixEntry(query, catalog);
+    if (matrixResult.entry) {
+      const targetProduct = matrixResult.product ?? catalog[0];
       const targetSku = targetProduct.sku;
+      const harnessSku =
+        matrixResult.entry.recommendedHarnessSku || targetProduct.recommendedHarnessSku;
+      const citedSkus = harnessSku && harnessSku !== targetSku ? [targetSku, harnessSku] : [targetSku];
       const specsSummary = `${targetProduct.name} (${targetProduct.specs.power} · ${targetProduct.specs.interface} · ${targetProduct.specs.ipRating})`;
 
+      if (matrixResult.entry.status === 'verified') {
+        if (targetProduct.category === 'EV Power & Diagnostics') {
+          return {
+            answer: `Requires confirmation: ${targetProduct.name} is a stationary depot controller (${targetProduct.specs.interface}). Depot electrical service and OCPP configuration must be confirmed by the supplier.\n\nSource: ${targetSku}`,
+            matchedSkus: [targetSku],
+            isFitmentResponse: true,
+            isVerifiedFitment: false,
+          };
+        }
+        return {
+          answer: `Verified (sample fitment matrix): ${matrixResult.entry.year} ${matrixResult.entry.make} ${matrixResult.entry.model} (${matrixResult.entry.vehicleClass}) matches a published sample profile for ${specsSummary}. ${matrixResult.entry.notes}${harnessSku ? ` Recommended harness: ${harnessSku}.` : ''} Final harness pinout confirmation applies at RFQ.\n\nSource: ${citedSkus.join(', ')}`,
+          matchedSkus: citedSkus,
+          isFitmentResponse: true,
+          isVerifiedFitment: true,
+        };
+      }
+
       return {
-        answer: `Verified: 2025 Rivian EDV 700 (Commercial EV) matches a verified vehicle profile in the published fitment matrix for ${specsSummary}. Source: ${targetSku}`,
-        matchedSkus: [targetSku],
+        answer: `Requires confirmation: ${matrixResult.entry.year} ${matrixResult.entry.make} ${matrixResult.entry.model} (${matrixResult.entry.vehicleClass}) — ${matrixResult.entry.notes}${harnessSku ? ` Recommended harness check: ${harnessSku}.` : ''} Attach this vehicle group to your quote request for supplier engineering confirmation.\n\nSource: ${citedSkus.join(', ')}`,
+        matchedSkus: citedSkus,
         isFitmentResponse: true,
-        isVerifiedFitment: true,
+        isVerifiedFitment: false,
       };
     }
 
     return {
-      answer: clientConfig.specAssistEscalationText,
+      answer: `Not yet verified: ${clientConfig.specAssistEscalationText}`,
       matchedSkus: [],
       isFitmentResponse: true,
       isVerifiedFitment: false,
     };
   }
 
-  // 2. Otherwise, answer specification / catalog questions strictly from the active storefront catalog
+  // 2. Check if user asks for metadata not present in sample catalogue (inventory, manufacturer, certifications, wiring diagrams)
   const matches = findMatchingProducts(query, catalog);
+  if (isUnavailableMetadataQuery(query)) {
+    const citedNote =
+      matches.length > 0
+        ? `\n\nPublished catalogue record (${matches[0].sku}): Power ${matches[0].specs.power} | Interface ${matches[0].specs.interface} | Rating ${matches[0].specs.ipRating}${matches[0].recommendedHarnessSku ? ` | Recommended harness: ${matches[0].recommendedHarnessSku}` : ''}.`
+        : '';
+    return {
+      answer: `Information unavailable in demonstration catalogue: live stock availability, OEM manufacturer assignments, regulatory certifications, lead times, and vehicle-specific wiring instructions are not published in this sample environment. Submit an RFQ to request confirmed documentation from a supplier.${citedNote}`,
+      matchedSkus: matches.slice(0, 1).map((p) => p.sku),
+      isFitmentResponse: false,
+    };
+  }
+
+  // 3. Otherwise, answer specification / catalog questions strictly from the active storefront catalog
   if (matches.length === 0) {
     const skuList = catalog.map((p) => p.sku).join(', ');
     return {
-      answer: `No matching hardware was found in the published ${storefront.brandName} catalog data. Ask about ${skuList}, or query by power input, interface, enclosure rating, or CAD tiers.`,
+      answer: `No matching hardware was found in the published ${storefront.brandName} sample catalog. Ask about ${skuList}, or query by power input, interface, enclosure rating, or CAD tiers. For unlisted requirements, submit an RFQ for supplier confirmation.`,
       matchedSkus: [],
       isFitmentResponse: false,
     };
@@ -185,10 +225,13 @@ export function answerSpecAssistQuestion(
     const tier2 = p.tiers[1];
     const tier2Text =
       tier2 && tier2.unitPrice !== null ? ` | ${tier2.label}: ${formatCad(tier2.unitPrice)}` : '';
-    return `${p.name} (${p.category}): Power ${p.specs.power} | Interface ${p.specs.interface} | Rating ${p.specs.ipRating} | From ${formatCad(tier1)} / ${p.unitLabel}${tier2Text}`;
+    const harnessText = p.recommendedHarnessSku
+      ? ` | Recommended accessory: ${p.recommendedHarnessSku}`
+      : '';
+    return `${p.name} (${p.category}): Power ${p.specs.power} | Interface ${p.specs.interface} | Rating ${p.specs.ipRating} | Sample From ${formatCad(tier1)} / ${p.unitLabel}${tier2Text}${harnessText}`;
   });
 
-  const citation = `Source: ${topMatches.map((p) => p.sku).join(', ')}`;
+  const citation = `Source: ${topMatches.map((p) => p.sku).join(', ')} (sample demonstration data)`;
 
   return {
     answer: `${lines.join('\n')}\n\n${citation}`,

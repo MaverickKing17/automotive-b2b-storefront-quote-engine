@@ -21,6 +21,8 @@ export interface CatalogProduct {
   unitLabel: 'unit' | 'bundle';
   description: string;
   imageUrl: string;
+  manufacturer?: string;
+  installationNote?: string;
   specs: {
     power: string;
     interface: string;
@@ -118,18 +120,20 @@ export const clientConfig = {
     'ADAS Retrofits',
     'EV Power & Diagnostics',
   ] as const,
-  catalogHeaderLine: 'All prices in CAD. Volume pricing is subject to formal fleet quote.',
+  catalogHeaderLine: 'Sample demonstration pricing in CAD. Volume allocations (50+ units) require formal supplier quote.',
   fitmentDisclaimer:
-    'FITMENT DATA IS VEHICLE-SPECIFIC. UNLISTED COMBINATIONS REQUIRE ENGINEERING REVIEW. DEMO CATALOGUE — SAMPLE FITMENT DATA.',
+    'SAMPLE FITMENT MATRIX DATA. UNLISTED OR CONDITIONAL COMBINATIONS REQUIRE SUPPLIER ENGINEERING CONFIRMATION.',
   specAssistEscalationText:
-    "I can't confirm that fitment from the published catalog data. Unverified fitment is escalated for a technical fitment check — add the vehicle in the fitment checker or include it in your quote request.",
+    'This combination is not yet verified in the published sample catalog data. Attach the vehicle group in the Fitment Finder or include it in your quotation request for supplier confirmation.',
   products: [
     {
       sku: 'AST-104',
       name: 'AST-104 Dual-Lens AI Fleet Dashcam',
       category: 'Video Telematics',
       unitLabel: 'unit',
-      description: 'Road-facing and driver-cabin AI event camera with cellular clip offload.',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Requires 12V/24V vehicle power verification; AST-640 harness recommended where pinout applies.',
+      description: 'Road-facing and driver-cabin event camera with cellular clip offload.',
       imageUrl: '/src/assets/images/prod_ast104_dashcam_1795290659601.jpg',
       specs: {
         power: '12V/24V',
@@ -164,6 +168,8 @@ export const clientConfig = {
       name: 'AST-208 J1939 / OBD-II Telematics Gateway',
       category: 'Fleet ELD & GPS',
       unitLabel: 'unit',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Requires OBD-II or J1939 port check; AST-640 harness recommended for heavy-duty pinouts.',
       description: 'Commercial vehicle bus bridge for ELD compliance, fault telemetry, and GPS tracking.',
       imageUrl: '/src/assets/images/prod_ast208_gateway_1795290660444.jpg',
       specs: {
@@ -199,6 +205,8 @@ export const clientConfig = {
       name: 'AST-316 Blind-Spot Radar Retrofit Kit',
       category: 'ADAS Retrofits',
       unitLabel: 'unit',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Requires 12V/24V CAN & discrete I/O integration; installer coordination recommended.',
       description: 'Side-zone blind-spot detection retrofit kit engineered for commercial chassis.',
       imageUrl: '/src/assets/images/prod_ast316_radar_1795290659543.jpg',
       specs: {
@@ -234,6 +242,8 @@ export const clientConfig = {
       name: 'AST-422 EV Fleet Depot Charger Controller',
       category: 'EV Power & Diagnostics',
       unitLabel: 'unit',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Stationary depot controller requiring wide-range DC and wired OCPP 1.6 Ethernet review.',
       description: 'Depot charging controller with OCPP 1.6 session telemetry and wired Ethernet uplink.',
       imageUrl: '/src/assets/images/prod_ast422_ev_controller_1795290660817.jpg',
       specs: {
@@ -268,6 +278,8 @@ export const clientConfig = {
       name: 'AST-537 Cabin Driver-Fatigue Sensor',
       category: 'Video Telematics',
       unitLabel: 'unit',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Requires 12V/24V cabin mounting & CAN/USB-C check; AST-640 harness optional.',
       description: 'In-cab driver attentiveness and drowsiness alert sensor with CAN bus output.',
       imageUrl: '/src/assets/images/prod_ast537_fatigue_sensor_1795290659283.jpg',
       specs: {
@@ -303,6 +315,8 @@ export const clientConfig = {
       name: 'AST-640 Heavy-Duty Wiring Harness Bundle',
       category: 'ADAS Retrofits',
       unitLabel: 'bundle',
+      manufacturer: 'Sample catalogue entry (supplier pending)',
+      installationNote: 'Vehicle-specific pinout verified against year/make/model prior to dispatch.',
       description: 'Sealed vehicle power and diagnostic interconnect harness bundle for fleet retrofits.',
       imageUrl: '/src/assets/images/prod_ast640_harness_1795290659605.jpg',
       specs: {
@@ -384,6 +398,17 @@ export const clientConfig = {
       '3–6 Months',
       'Planning / Budgeting',
     ] as const,
+    provincesAndRegions: [
+      'Ontario (ON)',
+      'Quebec (QC)',
+      'British Columbia (BC)',
+      'Alberta (AB)',
+      'Manitoba (MB)',
+      'Saskatchewan (SK)',
+      'Atlantic Canada (NB / NS / PE / NL)',
+      'Northern Territories (YT / NT / NU)',
+      'United States / International',
+    ] as const,
     installationAddon: {
       id: 'SVC-INSTALL',
       label: 'Installation — request installer coordination · subject to formal fleet quote',
@@ -414,62 +439,74 @@ export const clientConfig = {
   policies: [
     {
       id: 'shipping',
-      title: 'Shipping Policy',
-      demoTag: 'Sample demo text',
+      title: 'Shipping & Delivery Policy',
+      demoTag: 'Demo placeholder — supplier config required',
       summary:
-        'Sample demo text: Commercial freight dispatch and multi-depot consolidated pallet scheduling from Canadian distribution hubs.',
+        'Sample policy structure for commercial freight dispatch and consolidated multi-depot delivery scheduling.',
       fullText: [
-        'Sample demo policy text — Shipping Policy for Astrateq Gadgets commercial fleet orders.',
-        'Hardware orders confirmed via formal fleet quote are scheduled for ground courier or LTL freight dispatch based on unit count and depot destination across Canada.',
-        'Orders requiring engineering or harness verification are held from dispatch until pinout compatibility is signed off by a fleet technician.',
+        'Demonstration policy placeholder — Shipping & Delivery Policy (supplier configuration required before production use).',
+        'In a live supplier deployment, commercial orders confirmed via formal quotation are scheduled for courier or LTL freight dispatch based on unit volume and depot region.',
+        'Shipments requiring vehicle pinout or harness confirmation are held until technical compatibility is verified.',
       ],
     },
     {
       id: 'returns-rma',
       title: 'Returns & RMA Policy',
-      demoTag: 'Sample demo text',
+      demoTag: 'Demo placeholder — supplier config required',
       summary:
-        'Sample demo text: Unopened commercial hardware return window and structured RMA diagnostic intake for fleet accounts.',
+        'Sample policy structure for unopened commercial hardware returns and structured RMA diagnostic intake.',
       fullText: [
-        'Sample demo policy text — Returns & RMA Policy for Astrateq Gadgets.',
-        'Unopened, uninstalled units and sealed wiring harness bundles may be submitted for Return Merchandise Authorization within 30 days of commercial delivery.',
-        'Custom-terminated harnesses and field-installed sensors are evaluated through standard RMA bench inspection prior to credit or replacement.',
+        'Demonstration policy placeholder — Returns & RMA Policy (supplier configuration required before production use).',
+        'A supplier RMA workflow typically defines eligibility windows for unopened commercial hardware and sealed harness bundles.',
+        'Field-installed sensors and custom-terminated harnesses generally require bench inspection prior to credit or replacement.',
       ],
     },
     {
       id: 'warranty',
       title: 'Warranty Policy',
-      demoTag: 'Sample demo text',
+      demoTag: 'Demo placeholder — supplier config required',
       summary:
-        'Sample demo text: Commercial hardware coverage against manufacturing defects when installed per approved power specifications.',
+        'Sample policy structure for commercial hardware defect coverage conditioned on approved power interfaces.',
       fullText: [
-        'Sample demo policy text — Hardware Warranty Policy for Astrateq Gadgets.',
-        'Commercial telematics, video, ADAS, and charger controller hardware is covered against defects in materials and workmanship under normal fleet operating conditions.',
-        'Coverage applies when units are connected using approved vehicle power interfaces verified during the RFQ engineering review.',
+        'Demonstration policy placeholder — Hardware Warranty Policy (supplier configuration required before production use).',
+        'No active manufacturer warranty is offered by this demonstration environment.',
+        'In a configured supplier storefront, hardware warranty terms apply when units are installed using verified vehicle power and harness specifications.',
       ],
     },
     {
       id: 'privacy',
       title: 'Privacy Policy',
-      demoTag: 'Sample demo text',
+      demoTag: 'Demo placeholder — supplier config required',
       summary:
-        'Sample demo text: Fleet contact and vehicle configuration data handling limited strictly to RFQ preparation and engineering review.',
+        'Explains how fleet contact details and vehicle configurations are stored in this demo intake portal.',
       fullText: [
-        'Sample demo policy text — Privacy Policy for Astrateq Gadgets.',
-        'Contact details, fleet vehicle rosters, and deployment timelines submitted through the Quote Engine are used exclusively to prepare formal fleet quotes and technical fitment checks.',
-        'In this demo environment, RFQ data stays in your browser local storage unless an optional endpoint webhook is explicitly configured.',
+        'Demonstration policy text — Privacy & Data Handling for Astrateq Gadgets Demo Portal.',
+        'Contact details, vehicle groups, and deployment parameters are used to assemble your structured RFQ payload.',
+        'Draft quote progress is cached in your browser localStorage, and submitted RFQs are posted to the local demonstration backend (/api/rfq) unless an external supplier webhook is explicitly configured.',
       ],
     },
     {
       id: 'terms',
       title: 'Terms & Conditions',
-      demoTag: 'Sample demo text',
+      demoTag: 'Demo placeholder — supplier config required',
       summary:
-        'Sample demo text: Commercial quotation validity, CAD currency terms, and engineering verification contingencies.',
+        'Clarifies sample CAD pricing tiers, non-binding demonstration status, and formal quotation requirements.',
       fullText: [
-        'Sample demo policy text — Commercial Terms & Conditions for Astrateq Gadgets.',
-        'All published tier pricing is stated in Canadian Dollars (CAD). Volume allocations of 50+ units and multi-site installations are governed by formal written quotation.',
-        'Fitment designations in this digital showroom represent sample catalogue data and do not constitute a binding installation warranty until confirmed by formal engineering sign-off.',
+        'Demonstration policy text — Commercial Terms & Conditions.',
+        'All hardware pricing shown in this portal represents sample demonstration data in Canadian Dollars (CAD). Final pricing, taxes, freight, and lead times require a formal written supplier quote.',
+        'Fitment designations in this demonstration represent sample matrix data and do not constitute an engineering guarantee.',
+      ],
+    },
+    {
+      id: 'product-support',
+      title: 'Product Support Information',
+      demoTag: 'Demo placeholder — supplier config required',
+      summary:
+        'Sample support intake guidance for vehicle fitment escalation, harness pinout checks, and post-quote assistance.',
+      fullText: [
+        'Demonstration policy placeholder — Product Support Information (supplier contact & SLA configuration required).',
+        'Use the Vehicle Fitment Finder and Spec Assist on this portal to review published sample hardware specs and flag unlisted vehicle combinations.',
+        'In a production supplier rollout, dedicated technical support channels and RMA escalation contacts replace these demonstration placeholders.',
       ],
     },
   ] satisfies PolicyItem[],
@@ -510,13 +547,13 @@ export function evaluateVehicleFitment(
       normalize(entry.vehicleClass) === normalize(vehicle.vehicleClass)
   );
 
-  // Rule: if power source is "I don't know", downgrade even if matrix marks verified
+  // Rule: if power source is "I don't know", downgrade to requires-verification
   if (powerSource === "I don't know") {
     return {
       status: 'requires-verification',
-      headlineBadge: 'Requires Engineering / Harness Verification',
-      summaryText: 'attach this vehicle for a compatibility review',
-      drawerBadgeText: 'Requires engineering / harness verification — power source unknown',
+      headlineBadge: 'Requires confirmation',
+      summaryText: 'Vehicle power source is unknown — attach this vehicle for supplier confirmation.',
+      drawerBadgeText: 'Requires confirmation — power source unknown',
       reason: 'power source unknown',
       recommendedHarnessSku: matrixMatch?.recommendedHarnessSku ?? 'AST-640',
     };
@@ -526,19 +563,32 @@ export function evaluateVehicleFitment(
   if (matrixMatch && matrixMatch.status === 'verified') {
     return {
       status: 'verified',
-      headlineBadge: 'Verified Plug-and-Play Fitment',
-      summaryText: 'matched to a verified vehicle profile',
-      drawerBadgeText: 'Verified fitment',
+      headlineBadge: 'Verified',
+      summaryText: `${matrixMatch.notes} Sample fitment matrix match — confirm final harness pinout at RFQ.`,
+      drawerBadgeText: 'Verified — sample fitment matrix',
       recommendedHarnessSku: matrixMatch.recommendedHarnessSku ?? 'AST-640',
     };
   }
 
-  // Default with NO matrix entry or non-verified entry is ALWAYS requires-verification
+  // Rule: matrix entry explicitly marked requires-verification
+  if (matrixMatch && matrixMatch.status === 'requires-verification') {
+    return {
+      status: 'requires-verification',
+      headlineBadge: 'Requires confirmation',
+      summaryText: matrixMatch.notes,
+      drawerBadgeText: 'Requires confirmation — upfitter pinout varies',
+      reason: 'conditional fitment in matrix',
+      recommendedHarnessSku: matrixMatch.recommendedHarnessSku ?? 'AST-640',
+    };
+  }
+
+  // Default with NO matrix entry is ALWAYS not-verified
   return {
-    status: 'requires-verification',
-    headlineBadge: 'Requires Engineering / Harness Verification',
-    summaryText: 'attach this vehicle for a compatibility review',
-    drawerBadgeText: 'Requires engineering / harness verification',
-    recommendedHarnessSku: matrixMatch?.recommendedHarnessSku ?? 'AST-640',
+    status: 'not-verified',
+    headlineBadge: 'Not yet verified',
+    summaryText:
+      'Not in the published sample fitment matrix. Attach this vehicle group to flag it for supplier engineering confirmation.',
+    drawerBadgeText: 'Not yet verified — supplier confirmation required',
+    recommendedHarnessSku: 'AST-640',
   };
 }

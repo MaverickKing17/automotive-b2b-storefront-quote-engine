@@ -12,7 +12,7 @@ interface HeroSectionProps {
   onUpdateDeployment: (patch: Partial<DeploymentAnswers>) => void;
   onOpenDrawer: () => void;
   onSetStep: (step: 1 | 2 | 3) => void;
-  onAttachVehicle: (vehicle: VehicleSelection) => void;
+  onAttachVehicle: (vehicle: VehicleSelection, quantity?: number) => void;
   onAddProduct: (sku: string) => void;
   onSelectCategory: (category: string) => void;
   attachedGroupCount: number;
@@ -83,7 +83,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     onUpdateDeployment({ upfitLocation: loc });
   };
 
-  // STOREFRONT 1 — ASTRATEQ GADGETS (Preserved Exact Visual Reproduction)
+  // STOREFRONT 1 — ASTRATEQ GADGETS (B2B Fleet Quote Intake Portal)
   if (storefront.heroLayout === 'docked-right-finder') {
     return (
       <div id="top">
@@ -97,6 +97,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 className="w-full h-full object-cover object-[center_44%] lg:scale-[1.05] lg:-translate-x-[3%] contrast-[1.04] saturate-[1.05]"
               />
               <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
+              <div className="sm:hidden absolute inset-0 bg-gradient-to-b from-[#060B13]/65 via-[#060B13]/50 to-[#060B13]/70" />
               <div
                 style={{
                   background: `linear-gradient(to top, ${theme.bgCanvas} 0%, transparent 10%)`,
@@ -107,62 +108,68 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             <div className="relative w-full mx-auto max-w-[1360px] px-4 sm:px-6 py-9 lg:py-11">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-                <div className="max-w-[500px]">
+                <div className="max-w-[540px]">
                   <p
                     style={{ color: theme.accentInfo }}
-                    className="text-[11px] font-mono-tech uppercase tracking-[0.18em] font-semibold mb-2.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]"
+                    className="text-[11px] font-mono-tech uppercase tracking-[0.14em] sm:tracking-[0.18em] font-semibold mb-2.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)]"
                   >
-                    AUTOMOTIVE TECHNOLOGY · FLEET SOLUTIONS
+                    {storefront.tagline}
                   </p>
 
                   <h1
                     style={{ color: theme.textPrimary }}
-                    className="font-display text-[36px] sm:text-[44px] lg:text-[48px] font-bold tracking-tight leading-[1.06] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
+                    className="font-display text-[32px] sm:text-[42px] lg:text-[46px] font-bold tracking-tight leading-[1.08] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
                   >
-                    Drive With
-                    <br />
-                    <span className="sm:whitespace-nowrap">Absolute Confidence.</span>
+                    {storefront.heroHeadlinePrefix}
+                    {storefront.heroHeadlineHighlight && (
+                      <>
+                        <br />
+                        <span>{storefront.heroHeadlineHighlight}</span>
+                      </>
+                    )}
                   </h1>
 
                   <p
-                    style={{ color: '#B6C3D4' }}
-                    className="mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[435px] drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]"
+                    style={{ color: '#C2CDD9' }}
+                    className="mt-3.5 text-sm sm:text-[15px] leading-relaxed max-w-[490px] drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]"
                   >
-                    Advanced automotive hardware, intelligent telematics and fleet technology
-                    engineered for modern mobility.
+                    {storefront.heroSubtitle}
                   </p>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={onOpenDrawer}
+                    <a
+                      href="#hardware"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleBrowsePrimary();
+                      }}
                       style={{
                         backgroundColor: theme.ctaBg,
                         color: theme.ctaText,
                       }}
                       className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs sm:text-[13px] font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
                     >
-                      <span>{storefront.secondaryCtaLabel}</span>
-                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                    </button>
-
-                    <a
-                      href="#hardware"
-                      onClick={() => onSelectCategory(storefront.defaultCategory)}
-                      style={{
-                        borderColor: '#334A66',
-                        backgroundColor: 'rgba(10, 19, 32, 0.78)',
-                        color: theme.textPrimary,
-                      }}
-                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-medium hover:border-[#22D3EE]/60 transition-colors whitespace-nowrap shrink-0"
-                    >
                       <span>{storefront.primaryCtaLabel}</span>
                       <ArrowRight className="w-4 h-4" aria-hidden="true" />
                     </a>
+
+                    <button
+                      type="button"
+                      onClick={onOpenDrawer}
+                      style={{
+                        borderColor: '#334A66',
+                        backgroundColor: 'rgba(10, 19, 32, 0.82)',
+                        color: theme.textPrimary,
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-xs sm:text-[13px] font-medium hover:border-[#22D3EE]/60 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                    >
+                      <span>{storefront.secondaryCtaLabel}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="w-full max-w-[320px] lg:shrink-0">
+                <div className="w-full max-w-[340px] lg:shrink-0">
                   <FitmentFinder
                     theme={theme}
                     storefrontId={storefront.id}
@@ -170,6 +177,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     layout="docked-vertical"
                     onAttachVehicle={onAttachVehicle}
                     onAddProduct={onAddProduct}
+                    onOpenDrawer={onOpenDrawer}
                     attachedGroupCount={attachedGroupCount}
                   />
                 </div>

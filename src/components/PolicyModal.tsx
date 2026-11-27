@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { PolicyItem } from '../data/clientConfig';
 import type { StorefrontTheme } from '../data/storefronts';
@@ -10,6 +10,15 @@ interface PolicyModalProps {
 }
 
 export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose }) => {
+  useEffect(() => {
+    if (!policy) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [policy, onClose]);
+
   if (!policy) return null;
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
 
@@ -19,6 +28,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose
       role="dialog"
       aria-modal="true"
       aria-labelledby="policy-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         style={{

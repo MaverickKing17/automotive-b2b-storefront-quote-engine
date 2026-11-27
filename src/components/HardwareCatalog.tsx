@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, CheckCircle2, AlertTriangle, HelpCircle } from 'lucide-react';
 import {
   clientConfig,
+  evaluateVehicleFitment,
   formatCad,
   getTier1Price,
   type CatalogProduct,
 } from '../data/clientConfig';
 import type { StorefrontId, StorefrontTheme } from '../data/storefronts';
-import type { QuoteLineItem } from '../types/quote';
+import type { FitmentStatus, QuoteLineItem, VehicleGroup } from '../types/quote';
 import { ProductSchematic } from './BlueprintArtwork';
 
 interface HardwareCatalogProps {
@@ -24,8 +25,44 @@ interface HardwareCatalogProps {
   searchQuery: string;
   onClearSearch: () => void;
   lineItems: QuoteLineItem[];
+  vehicleGroups?: VehicleGroup[];
   onAddToQuote: (sku: string) => void;
   onViewSpecs: (product: CatalogProduct) => void;
+}
+
+function getCardCompatibilityState(
+  product: CatalogProduct,
+  vehicleGroups: VehicleGroup[]
+): { status: FitmentStatus; label: string } {
+  if (product.category === 'EV Power & Diagnostics') {
+    return {
+      status: 'requires-verification',
+      label: 'Requires confirmation (depot site / OCPP check)',
+    };
+  }
+  if (vehicleGroups.length === 0) {
+    return {
+      status: 'not-verified',
+      label: 'Not yet verified — select vehicle',
+    };
+  }
+  const evals = vehicleGroups.map((g) => evaluateVehicleFitment(g, g.powerSource));
+  if (evals.every((e) => e.status === 'verified')) {
+    return {
+      status: 'verified',
+      label: `Verified (${vehicleGroups.length} ${vehicleGroups.length === 1 ? 'group' : 'groups'})`,
+    };
+  }
+  if (evals.some((e) => e.status === 'requires-verification' || e.status === 'verified')) {
+    return {
+      status: 'requires-verification',
+      label: 'Requires confirmation for attached fleet',
+    };
+  }
+  return {
+    status: 'not-verified',
+    label: 'Not yet verified for attached vehicle',
+  };
 }
 
 const ProductCardMedia: React.FC<{
@@ -78,6 +115,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
   searchQuery,
   onClearSearch,
   lineItems,
+  vehicleGroups = [],
   onAddToQuote,
   onViewSpecs,
 }) => {
@@ -229,6 +267,9 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
             {filteredProducts.map((product) => {
               const tier1Price = getTier1Price(product);
               const qtyInQuote = getQtyInQuote(product.sku);
+              const compat = isAstrateq
+                ? getCardCompatibilityState(product, vehicleGroups)
+                : null;
 
               return (
                 <article
@@ -310,6 +351,58 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                       </div>
                     </div>
 
+                    {/* Astrateq Procurement Info (Compatibility, Harness, Install) */}
+                    {isAstrateq && compat && (
+                      <div
+                        style={{ borderColor: theme.border }}
+                        className="mt-3 pt-3 border-t space-y-1.5 text-[11px] font-mono-tech"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                            Fitment
+                          </span>
+                          <span
+                            style={{
+                              color:
+                                compat.status === 'verified'
+                                  ? theme.badgeVerifiedText
+                                  : compat.status === 'requires-verification'
+                                    ? theme.badgeWarnText
+                                    : '#D6DDE5',
+                            }}
+                            className="inline-flex items-center gap-1 font-semibold text-right"
+                          >
+                            {compat.status === 'verified' ? (
+                              <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            ) : compat.status === 'requires-verification' ? (
+                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            ) : (
+                              <HelpCircle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            )}
+                            <span>{compat.label}</span>
+                          </span>
+                        </div>
+                        {product.recommendedHarnessSku && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span style={{ color: '#A8B3BF' }} className="uppercase">
+                              Accessory
+                            </span>
+                            <span style={{ color: '#D6DDE5' }}>
+                              {product.recommendedHarnessSku} harness (optional)
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                            Supplier
+                          </span>
+                          <span style={{ color: '#D6DDE5' }} className="truncate">
+                            Demo sample (pending)
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Pricing from Tier 1 */}
                     <div className="mt-4 flex items-baseline justify-between gap-2">
                       <div>
@@ -349,7 +442,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <Plus className="w-4 h-4" aria-hidden="true" />
-                        <span>Add to quote</span>
+                        <span>{isAstrateq ? 'Request a Quote' : 'Add to quote'}</span>
                       </button>
 
                       <button
