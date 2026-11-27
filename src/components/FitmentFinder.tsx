@@ -427,6 +427,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
         {result && (
           <div
             data-testid="fitment-result-panel"
+            aria-live="polite"
             style={{ borderColor: isHorizontal ? theme.border : '#1B283C' }}
             className="mt-3.5 border-t pt-3 space-y-2.5"
           >

@@ -55,8 +55,8 @@ export const Footer: React.FC<FooterProps> = ({
               href="#hardware"
               className={
                 isAstrateq
-                  ? 'hover:text-[#F3F6FA] transition-colors'
-                  : 'hover:opacity-100 opacity-85 transition-opacity'
+                  ? 'py-1 hover:text-[#F3F6FA] transition-colors'
+                  : 'py-1 hover:opacity-100 opacity-85 transition-opacity'
               }
             >
               Hardware
@@ -65,8 +65,8 @@ export const Footer: React.FC<FooterProps> = ({
               href="#fitment"
               className={
                 isAstrateq
-                  ? 'hover:text-[#F3F6FA] transition-colors'
-                  : 'hover:opacity-100 opacity-85 transition-opacity'
+                  ? 'py-1 hover:text-[#F3F6FA] transition-colors'
+                  : 'py-1 hover:opacity-100 opacity-85 transition-opacity'
               }
             >
               Fitment
@@ -75,8 +75,8 @@ export const Footer: React.FC<FooterProps> = ({
               href="#spec-assist"
               className={
                 isAstrateq
-                  ? 'hover:text-[#F3F6FA] transition-colors'
-                  : 'hover:opacity-100 opacity-85 transition-opacity'
+                  ? 'py-1 hover:text-[#F3F6FA] transition-colors'
+                  : 'py-1 hover:opacity-100 opacity-85 transition-opacity'
               }
             >
               Spec Assist
@@ -85,8 +85,8 @@ export const Footer: React.FC<FooterProps> = ({
               href="#policies"
               className={
                 isAstrateq
-                  ? 'hover:text-[#F3F6FA] transition-colors'
-                  : 'hover:opacity-100 opacity-85 transition-opacity'
+                  ? 'py-1 hover:text-[#F3F6FA] transition-colors'
+                  : 'py-1 hover:opacity-100 opacity-85 transition-opacity'
               }
             >
               Policies &amp; Support
@@ -95,7 +95,7 @@ export const Footer: React.FC<FooterProps> = ({
               type="button"
               onClick={onOpenDrawer}
               style={{ color: theme.accentPrimary }}
-              className="font-semibold hover:underline underline-offset-4 cursor-pointer"
+              className="py-1 font-semibold hover:underline underline-offset-4 cursor-pointer"
             >
               Request Fleet Quote
             </button>
@@ -126,7 +126,7 @@ export const Footer: React.FC<FooterProps> = ({
                     color: active ? theme.accentPrimary : footerBodyColor,
                     fontWeight: active ? 700 : 500,
                   }}
-                  className="hover:underline underline-offset-4"
+                  className="py-1 hover:underline underline-offset-4"
                 >
                   {cfg.badgeNumber}. {cfg.shortLabel}
                 </a>

@@ -225,6 +225,8 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
                       src={item.imageUrl}
                       alt={item.title}
                       referrerPolicy="no-referrer"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                     />
                   </div>
@@ -265,6 +267,8 @@ export const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
                   src={item.imageUrl}
                   alt={item.title}
                   referrerPolicy="no-referrer"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover contrast-[1.03] saturate-[1.04] group-hover:scale-[1.04] transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#070B12]/88 via-[#070B12]/20 via-45% to-transparent" />

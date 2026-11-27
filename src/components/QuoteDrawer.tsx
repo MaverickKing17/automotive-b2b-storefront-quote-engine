@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
   Plus,
@@ -190,13 +190,20 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
     generateDraftKey(storefront.id)
   );
 
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+    const prevFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      prevFocused?.focus?.();
+    };
   }, [isOpen, onClose]);
 
   useEffect(() => {
@@ -623,7 +630,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
             backgroundColor: theme.bgSurface,
             borderColor: theme.border,
           }}
-          className="border-b px-6 py-4 flex items-center justify-between gap-4"
+          className="border-b px-4 sm:px-6 py-4 flex items-center justify-between gap-4"
         >
           <div>
             <div
@@ -639,11 +646,12 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
           </div>
 
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={onClose}
             aria-label="Close quote drawer"
             style={{ color: theme.textSecondary }}
-            className="p-2 cursor-pointer"
+            className="inline-flex items-center justify-center w-10 h-10 -mr-1.5 cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -676,7 +684,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                     color: isActive ? infoColor : isPast ? theme.textPrimary : theme.textMuted,
                     borderColor: theme.border,
                   }}
-                  className={`px-3 py-2.5 text-left border-r last:border-r-0 transition-colors ${
+                  className={`px-2 sm:px-3 py-2.5 text-left border-r last:border-r-0 transition-colors ${
                     isPast ? 'cursor-pointer' : isActive ? 'font-semibold' : 'cursor-not-allowed'
                   }`}
                 >
@@ -689,7 +697,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
         )}
 
         {/* Drawer Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {submittedRecord ? (
             (() => {
               const submittedContact =
@@ -977,7 +985,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   onClick={() => onRemoveLineItem(item.sku)}
                                   aria-label={`Remove ${product.sku}`}
                                   style={{ color: theme.textMuted }}
-                                  className="p-1.5 cursor-pointer hover:opacity-80"
+                                  className="inline-flex items-center justify-center w-9 h-9 -mr-1 -mt-1 cursor-pointer hover:opacity-80 shrink-0"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1152,7 +1160,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           backgroundColor: theme.bgSurface,
                           borderColor: theme.border,
                         }}
-                        className="flex items-center justify-between gap-3 border p-3"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border p-3"
                       >
                         <div>
                           <div className="text-xs font-semibold">{recommendedAddonProduct.name}</div>
@@ -1193,7 +1201,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         backgroundColor: theme.bgSurface,
                         borderColor: theme.border,
                       }}
-                      className="flex items-center justify-between gap-3 border p-3"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border p-3"
                     >
                       <div>
                         <div className="text-xs font-semibold">
@@ -1419,7 +1427,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   onClick={() => onRemoveVehicleGroup(group.id)}
                                   aria-label={`Remove vehicle group ${group.year} ${group.make} ${group.model}`}
                                   style={{ color: theme.textMuted }}
-                                  className="p-1.5 cursor-pointer"
+                                  className="inline-flex items-center justify-center w-9 h-9 -mr-1 -mt-1 cursor-pointer shrink-0"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1980,6 +1988,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         id="contact-full-name"
                         type="text"
                         required
+                        aria-invalid={Boolean(step2Error && !contact.fullName.trim())}
+                        aria-describedby={step2Error ? 'step2-contact-error' : undefined}
                         value={contact.fullName}
                         onChange={(e) => onUpdateContact({ fullName: e.target.value })}
                         placeholder="Jordan Alvarez"
@@ -2000,6 +2010,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                         id="contact-company"
                         type="text"
                         required
+                        aria-invalid={Boolean(step2Error && !contact.companyName.trim())}
+                        aria-describedby={step2Error ? 'step2-contact-error' : undefined}
                         value={contact.companyName}
                         onChange={(e) => onUpdateContact({ companyName: e.target.value })}
                         placeholder="Northern Corridor Logistics Ltd."
@@ -2021,6 +2033,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           id="contact-email"
                           type="email"
                           required
+                          aria-invalid={Boolean(
+                            step2Error && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.workEmail.trim())
+                          )}
+                          aria-describedby={step2Error ? 'step2-contact-error' : undefined}
                           value={contact.workEmail}
                           onChange={(e) => onUpdateContact({ workEmail: e.target.value })}
                           placeholder="j.alvarez@corridorlogistics.ca"
@@ -2041,6 +2057,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                           id="contact-phone"
                           type="tel"
                           required
+                          aria-invalid={Boolean(
+                            step2Error && contact.phone.replace(/\D/g, '').length < 7
+                          )}
+                          aria-describedby={step2Error ? 'step2-contact-error' : undefined}
                           value={contact.phone}
                           onChange={(e) => onUpdateContact({ phone: e.target.value })}
                           placeholder="+1 (416) 555-0148"
@@ -2096,6 +2116,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
                   {step2Error && (
                     <div
+                      id="step2-contact-error"
                       role="alert"
                       style={{
                         backgroundColor: theme.badgeWarnBg,
@@ -2180,7 +2201,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
                     <div
                       style={{ borderColor: theme.border }}
-                      className="border-t pt-3 flex items-center justify-between text-sm font-mono-tech"
+                      className="border-t pt-3 flex flex-wrap items-center justify-between gap-2 text-sm font-mono-tech"
                     >
                       <span style={{ color: theme.textSecondary }}>
                         Estimated Tiered Hardware Subtotal
@@ -2490,7 +2511,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
               backgroundColor: theme.bgSurface,
               borderColor: theme.border,
             }}
-            className="border-t px-6 py-4 flex items-center justify-between gap-3"
+            className="border-t px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3"
           >
             {currentStep === 1 && (
               <>
@@ -2498,7 +2519,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   type="button"
                   onClick={onClose}
                   style={{ color: theme.textSecondary }}
-                  className="text-xs font-medium cursor-pointer"
+                  className="py-1.5 text-xs font-medium cursor-pointer"
                 >
                   Continue browsing
                 </button>
@@ -2521,7 +2542,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   type="button"
                   onClick={() => onSetStep(1)}
                   style={{ color: theme.textSecondary }}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+                  className="inline-flex items-center gap-1.5 py-1.5 text-xs font-medium cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                   <span>Back to Deployment</span>
@@ -2546,7 +2567,7 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   onClick={() => onSetStep(2)}
                   disabled={isSubmitting}
                   style={{ color: theme.textSecondary }}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 py-1.5 text-xs font-medium cursor-pointer disabled:opacity-40"
                 >
                   <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                   <span>Edit Contact</span>

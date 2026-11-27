@@ -72,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-7 lg:gap-10">
           <a
             href="#top"
-            className="flex items-center gap-2.5 whitespace-nowrap shrink-0 focus-visible:outline-none"
+            className="flex items-center gap-2.5 whitespace-nowrap shrink-0"
           >
             <StorefrontLogo storefront={storefront} />
             <span className="flex flex-col leading-none">
@@ -135,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
                 borderColor: theme.isLight ? '#DCE3EC' : '#1E2B3E',
                 color: theme.textPrimary,
               }}
-              className="w-48 xl:w-60 h-9 rounded-full border pl-9 pr-8 text-xs focus:outline-none"
+              className="w-48 xl:w-60 h-9 rounded-full border pl-9 pr-9 text-xs"
             />
             {searchQuery && (
               <button
@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => onSearchChange('')}
                 aria-label="Clear search"
                 style={{ color: theme.textMuted }}
-                className="absolute right-3 cursor-pointer"
+                className="absolute right-1.5 w-7 h-7 flex items-center justify-center rounded-full cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-label={`Open Quote List (${lineItemCount} line items)`}
             title={`Quote List (${lineItemCount} items)`}
             style={iconButtonStyle}
-            className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border hover:opacity-85 transition-opacity cursor-pointer shrink-0"
+            className="relative inline-flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-full border hover:opacity-85 transition-opacity cursor-pointer shrink-0"
           >
             <ShoppingCart className="w-4 h-4" aria-hidden="true" />
             <span
@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-nav-drawer"
             style={{ borderColor: theme.border, color: theme.textPrimary }}
-            className="lg:hidden p-2 border rounded-full cursor-pointer"
+            className="lg:hidden inline-flex items-center justify-center w-10 h-10 border rounded-full cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -241,10 +241,10 @@ export const Header: React.FC<HeaderProps> = ({
                 borderColor: theme.border,
                 color: theme.textPrimary,
               }}
-              className="w-full h-9 rounded-full border pl-9 pr-3 text-xs focus:outline-none"
+              className="w-full h-10 rounded-full border pl-9 pr-3 text-xs"
             />
           </form>
-          <div className="flex flex-wrap items-center gap-4">
+          <nav aria-label="Mobile navigation" className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
             {storefront.navLinks.map((link) => (
               <a
                 key={link.label}
@@ -254,12 +254,12 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                 }}
                 style={{ color: theme.textPrimary }}
-                className="text-xs font-medium py-1"
+                className="text-xs font-medium py-1.5"
               >
                 {link.label}
               </a>
             ))}
-          </div>
+          </nav>
         </div>
       )}
     </header>

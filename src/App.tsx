@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import {
   clientConfig,
   getTierForQuantity,
@@ -28,9 +28,16 @@ import { ProcessSection } from './components/ProcessSection';
 import { SpecAssistSection } from './components/SpecAssistSection';
 import { PoliciesSection } from './components/PoliciesSection';
 import { Footer } from './components/Footer';
-import { ProductSpecsModal } from './components/ProductSpecsModal';
-import { PolicyModal } from './components/PolicyModal';
-import { QuoteDrawer } from './components/QuoteDrawer';
+
+const ProductSpecsModal = lazy(() =>
+  import('./components/ProductSpecsModal').then((m) => ({ default: m.ProductSpecsModal }))
+);
+const PolicyModal = lazy(() =>
+  import('./components/PolicyModal').then((m) => ({ default: m.PolicyModal }))
+);
+const QuoteDrawer = lazy(() =>
+  import('./components/QuoteDrawer').then((m) => ({ default: m.QuoteDrawer }))
+);
 
 const getStorageKey = (storefrontId: StorefrontId) =>
   storefrontId === 'astrateq'
@@ -378,12 +385,24 @@ export default function App() {
 
   return (
     <div
+      data-theme={activeStorefront.theme.isLight ? 'light' : 'dark'}
       style={{
         backgroundColor: activeStorefront.theme.bgCanvas,
         color: activeStorefront.theme.textPrimary,
       }}
       className="min-h-screen flex flex-col transition-colors duration-200"
     >
+      <a
+        href="#main-content"
+        style={{
+          backgroundColor: activeStorefront.theme.ctaBg,
+          color: activeStorefront.theme.ctaText,
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-md focus:text-xs focus:font-semibold"
+      >
+        Skip to main content
+      </a>
+
       <StorefrontSwitcher activeId={storefrontId} onSelect={handleSelectStorefront} />
 
       <Header
@@ -395,7 +414,7 @@ export default function App() {
         onOpenDrawer={() => setDrawerOpen(true)}
       />
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         <HeroSection
           storefront={activeStorefront}
           deployment={quoteState.deployment}
@@ -455,39 +474,47 @@ export default function App() {
         onSelectStorefront={handleSelectStorefront}
       />
 
-      <ProductSpecsModal
-        theme={activeStorefront.theme}
-        product={activeSpecsProduct}
-        vehicleGroups={quoteState.vehicleGroups}
-        onClose={() => setActiveSpecsProduct(null)}
-        onAddToQuote={handleAddProduct}
-      />
+      <Suspense fallback={null}>
+        {activeSpecsProduct && (
+          <ProductSpecsModal
+            theme={activeStorefront.theme}
+            product={activeSpecsProduct}
+            vehicleGroups={quoteState.vehicleGroups}
+            onClose={() => setActiveSpecsProduct(null)}
+            onAddToQuote={handleAddProduct}
+          />
+        )}
 
-      <PolicyModal
-        theme={activeStorefront.theme}
-        policy={activePolicy}
-        onClose={() => setActivePolicy(null)}
-      />
+        {activePolicy && (
+          <PolicyModal
+            theme={activeStorefront.theme}
+            policy={activePolicy}
+            onClose={() => setActivePolicy(null)}
+          />
+        )}
 
-      <QuoteDrawer
-        storefront={activeStorefront}
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        quoteState={quoteState}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveLineItem={handleRemoveLineItem}
-        onAddProduct={handleAddProduct}
-        onToggleInstallation={handleToggleInstallation}
-        onAddVehicleGroup={handleAttachVehicleGroup}
-        onUpdateVehicleGroup={handleUpdateVehicleGroup}
-        onRemoveVehicleGroup={handleRemoveVehicleGroup}
-        onUpdateDeployment={handleUpdateDeployment}
-        onUpdateContact={handleUpdateContact}
-        onSetStep={handleSetStep}
-        onSetSubmittedRecord={handleSetSubmittedRecord}
-        onResetQuote={handleResetQuote}
-        onOpenPolicy={setActivePolicy}
-      />
+        {drawerOpen && (
+          <QuoteDrawer
+            storefront={activeStorefront}
+            isOpen={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            quoteState={quoteState}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveLineItem={handleRemoveLineItem}
+            onAddProduct={handleAddProduct}
+            onToggleInstallation={handleToggleInstallation}
+            onAddVehicleGroup={handleAttachVehicleGroup}
+            onUpdateVehicleGroup={handleUpdateVehicleGroup}
+            onRemoveVehicleGroup={handleRemoveVehicleGroup}
+            onUpdateDeployment={handleUpdateDeployment}
+            onUpdateContact={handleUpdateContact}
+            onSetStep={handleSetStep}
+            onSetSubmittedRecord={handleSetSubmittedRecord}
+            onResetQuote={handleResetQuote}
+            onOpenPolicy={setActivePolicy}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

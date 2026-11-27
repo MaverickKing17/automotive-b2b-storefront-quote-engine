@@ -13,7 +13,7 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
   const activeStore = STOREFRONTS[activeId];
 
   return (
-    <div
+    <nav
       aria-label="Independent B2B storefront demonstrations"
       style={{
         backgroundColor: activeStore.theme.isLight ? '#E2E8F0' : '#05080D',
@@ -34,6 +34,7 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
               <a
                 key={id}
                 href={`?store=${id}`}
+                aria-current={isSelected ? 'page' : undefined}
                 onClick={(e) => {
                   e.preventDefault();
                   onSelect(id);
@@ -54,7 +55,7 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
                         borderColor: activeStore.theme.border,
                       }
                 }
-                className="px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
               >
                 {cfg.badgeNumber}. {cfg.shortLabel}
               </a>
@@ -62,6 +63,6 @@ export const StorefrontSwitcher: React.FC<StorefrontSwitcherProps> = ({
           })}
         </div>
       </div>
-    </div>
+    </nav>
   );
 };

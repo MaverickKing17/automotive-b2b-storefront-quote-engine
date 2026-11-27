@@ -32,6 +32,7 @@ export const StorefrontLogo: React.FC<{ storefront: StorefrontConfig }> = ({ sto
         src={storefront.logoUrl}
         alt={`${storefront.brandName} logo`}
         referrerPolicy="no-referrer"
+        decoding="async"
         onError={() => setImgFailed(true)}
         className="h-9 w-auto max-w-[150px] object-contain"
       />

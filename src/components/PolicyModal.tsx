@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import type { PolicyItem } from '../data/clientConfig';
 import type { StorefrontTheme } from '../data/storefronts';
@@ -10,13 +10,20 @@ interface PolicyModalProps {
 }
 
 export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose }) => {
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!policy) return;
+    const prevFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      prevFocused?.focus?.();
+    };
   }, [policy, onClose]);
 
   if (!policy) return null;
@@ -45,7 +52,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose
             backgroundColor: theme.bgSurface,
             borderColor: theme.border,
           }}
-          className="flex items-start justify-between gap-4 border-b px-6 py-4"
+          className="flex items-start justify-between gap-4 border-b px-4 sm:px-6 py-4"
         >
           <div>
             <p
@@ -59,11 +66,12 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose
             </h3>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={onClose}
             aria-label="Close policy dialog"
             style={{ color: theme.textSecondary }}
-            className="p-2 cursor-pointer"
+            className="inline-flex items-center justify-center w-10 h-10 -mr-1.5 cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -71,7 +79,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose
 
         <div
           style={{ color: theme.textSecondary }}
-          className="p-6 space-y-3 text-sm leading-relaxed"
+          className="p-4 sm:p-6 space-y-3 text-sm leading-relaxed max-h-[70vh] overflow-y-auto"
         >
           {policy.fullText.map((paragraph, idx) => (
             <p key={idx}>{paragraph}</p>
@@ -83,7 +91,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ theme, policy, onClose
             backgroundColor: theme.bgSurface,
             borderColor: theme.border,
           }}
-          className="border-t px-6 py-3.5 flex justify-end"
+          className="border-t px-4 sm:px-6 py-3.5 flex justify-end"
         >
           <button
             type="button"

@@ -94,6 +94,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 src={storefront.heroImageUrl}
                 alt={storefront.heroImageAlt}
                 referrerPolicy="no-referrer"
+                decoding="async"
+                fetchPriority="high"
                 className="w-full h-full object-cover object-[center_44%] lg:scale-[1.05] lg:-translate-x-[3%] contrast-[1.04] saturate-[1.05]"
               />
               <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
@@ -211,6 +213,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               src={storefront.heroImageUrl}
               alt={storefront.heroImageAlt}
               referrerPolicy="no-referrer"
+              decoding="async"
+              fetchPriority="high"
               className="w-full h-full object-cover object-right md:object-center contrast-[1.04] saturate-[1.05]"
             />
             <div className={`absolute inset-0 ${theme.heroScrimClass}`} />
@@ -498,7 +502,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.northlinkOptions.fleetSizes.map((opt) => (
                         <option key={opt} value={opt}>
@@ -527,7 +531,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.northlinkOptions.vehicleTypes.map((opt) => (
                         <option key={opt} value={opt}>
@@ -559,7 +563,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.northlinkOptions.trackingRequirements.map((opt) => (
                         <option key={opt} value={opt}>
@@ -591,7 +595,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.northlinkOptions.connectivityPreferences.map((opt) => (
                         <option key={opt} value={opt}>
@@ -669,7 +673,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.chargingOptions?.chargingTypes.map((opt) => (
                         <option key={opt} value={opt}>
@@ -696,7 +700,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.chargingOptions?.chargingBays.map((opt) => (
                         <option key={opt} value={opt}>
@@ -723,7 +727,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.chargingOptions?.siteConditions.map((opt) => (
                         <option key={opt} value={opt}>
@@ -750,7 +754,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.chargingOptions?.electricalServices.map((opt) => (
                         <option key={opt} value={opt}>
@@ -779,7 +783,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                           borderColor: theme.borderStrong,
                           color: theme.textPrimary,
                         }}
-                        className="w-full h-9 rounded-lg border px-2 text-xs focus:outline-none"
+                        className="w-full h-9 rounded-lg border px-2 text-xs"
                       >
                         {storefront.chargingOptions?.fleetSizes.map((opt) => (
                           <option key={opt} value={opt}>
@@ -797,7 +801,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                           borderColor: theme.borderStrong,
                           color: theme.textPrimary,
                         }}
-                        className="w-full h-9 rounded-lg border px-2 text-xs focus:outline-none"
+                        className="w-full h-9 rounded-lg border px-2 text-xs"
                       >
                         {storefront.chargingOptions?.regions.map((opt) => (
                           <option key={opt} value={opt}>
@@ -821,6 +825,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
               {evResultVisible && (
                 <div
+                  aria-live="polite"
                   style={{ borderColor: theme.border }}
                   className="mt-4 pt-3.5 border-t space-y-2.5"
                 >
@@ -1013,7 +1018,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.upfitWorkflowOptions.vehicleUses.map((opt) => (
                         <option key={opt} value={opt}>
@@ -1043,7 +1048,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.upfitWorkflowOptions.requiredEquipment.map((opt) => (
                         <option key={opt} value={opt}>
@@ -1072,7 +1077,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         borderColor: theme.borderStrong,
                         color: theme.textPrimary,
                       }}
-                      className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                      className="w-full h-9 rounded-lg border px-2.5 text-xs"
                     >
                       {storefront.upfitWorkflowOptions.installationRequirements.map((opt) => (
                         <option key={opt} value={opt}>

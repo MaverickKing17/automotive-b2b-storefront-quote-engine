@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Plus, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import {
   evaluateVehicleFitment,
@@ -24,13 +24,20 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
   onClose,
   onAddToQuote,
 }) => {
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (!product) return;
+    const prevFocused = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      prevFocused?.focus?.();
+    };
   }, [product, onClose]);
 
   if (!product) return null;
@@ -67,7 +74,7 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
             backgroundColor: theme.bgSurface,
             borderColor: theme.border,
           }}
-          className="flex items-start justify-between gap-4 border-b px-6 py-4"
+          className="flex items-start justify-between gap-4 border-b px-4 sm:px-6 py-4"
         >
           <div>
             <p style={{ color: infoColor }} className="text-xs font-mono-tech uppercase tracking-wider">
@@ -78,17 +85,18 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
             </h3>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             onClick={onClose}
             aria-label="Close specifications dialog"
             style={{ color: theme.textSecondary }}
-            className="p-2 cursor-pointer hover:opacity-80"
+            className="inline-flex items-center justify-center w-10 h-10 -mr-1.5 cursor-pointer hover:opacity-80 shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
             <div
               style={{ borderColor: theme.border }}
@@ -98,6 +106,7 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
                 src={product.imageUrl}
                 alt={product.name}
                 referrerPolicy="no-referrer"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -240,7 +249,7 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
             >
               Volume Pricing Tiers (Sample CAD · Per {product.unitLabel})
             </h4>
-            <div style={{ borderColor: theme.border }} className="border overflow-hidden">
+            <div style={{ borderColor: theme.border }} className="border overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead
                   style={{

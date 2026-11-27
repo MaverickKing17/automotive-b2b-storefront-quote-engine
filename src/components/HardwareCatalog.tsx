@@ -91,6 +91,8 @@ const ProductCardMedia: React.FC<{
         src={product.imageUrl}
         alt={product.name}
         referrerPolicy="no-referrer"
+        loading="lazy"
+        decoding="async"
         onError={() => setImgFailed(true)}
         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
       />
@@ -320,7 +322,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                       style={{ borderColor: theme.border }}
                       className="mt-4 grid grid-cols-3 gap-2 border-y py-3 text-[11px] font-mono-tech"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Power
                         </div>
@@ -332,7 +334,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                           {product.specs.power}
                         </div>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Interface
                         </div>
@@ -344,7 +346,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                           {product.specs.interface}
                         </div>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div style={{ color: isAstrateq ? '#A8B3BF' : theme.textMuted }} className="uppercase">
                           Rating
                         </div>
@@ -364,8 +366,8 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                         style={{ borderColor: theme.border }}
                         className="mt-3 pt-3 border-t space-y-1.5 text-[11px] font-mono-tech"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                        <div className="flex items-start justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase shrink-0">
                             Fitment
                           </span>
                           <span
@@ -377,7 +379,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                                     ? '#F87171'
                                     : theme.badgeWarnText,
                             }}
-                            className="inline-flex items-center gap-1 font-semibold text-right"
+                            className="inline-flex items-center gap-1 font-semibold text-right min-w-0"
                           >
                             {compat.status === 'verified' ? (
                               <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />
@@ -389,11 +391,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                             <span>{compat.label}</span>
                           </span>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                        <div className="flex items-start justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase shrink-0">
                             Accessory
                           </span>
-                          <span style={{ color: '#D6DDE5' }} className="text-right">
+                          <span style={{ color: '#D6DDE5' }} className="text-right min-w-0">
                             {product.recommendedHarnessSku
                               ? `${product.recommendedHarnessSku} harness (optional)`
                               : getNormalizedProductMetadata(product).accessoryRequirements.required
@@ -401,11 +403,11 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                                 : 'None listed in demo'}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                        <div className="flex items-start justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase shrink-0">
                             Supplier
                           </span>
-                          <span style={{ color: '#D6DDE5' }} className="truncate">
+                          <span style={{ color: '#D6DDE5' }} className="truncate min-w-0">
                             Demo sample (pending)
                           </span>
                         </div>
@@ -439,7 +441,7 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-auto pt-5 flex items-center justify-between gap-3">
+                    <div className="mt-auto pt-5 flex flex-wrap items-center justify-between gap-3">
                       <button
                         type="button"
                         onClick={() => onAddToQuote(product.sku)}

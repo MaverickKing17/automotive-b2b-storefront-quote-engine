@@ -100,7 +100,7 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
                   type="button"
                   onClick={() => onOpenPolicy(policy)}
                   style={{ color: infoColor }}
-                  className="inline-flex items-center gap-1 text-xs font-medium hover:underline underline-offset-4 cursor-pointer"
+                  className="inline-flex items-center gap-1 py-1 text-xs font-medium hover:underline underline-offset-4 cursor-pointer"
                 >
                   <span>Read policy</span>
                   <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
@@ -133,7 +133,7 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({
                 style={{ color: '#B4BEC9' }}
                 className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs"
               >
-                <span className="inline-flex items-center gap-1.5 break-all">
+                <span className="inline-flex items-center gap-1.5 break-words">
                   <Mail className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   <span>{contactInfo.email}</span>
                 </span>

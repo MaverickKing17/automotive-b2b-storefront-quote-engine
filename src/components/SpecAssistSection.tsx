@@ -142,6 +142,9 @@ export const SpecAssistSection: React.FC<{ storefront: StorefrontConfig }> = ({ 
 
             <div
               data-testid="spec-assist-transcript"
+              role="log"
+              aria-live="polite"
+              aria-label="Spec Assist responses"
               className="p-5 space-y-5 max-h-[380px] overflow-y-auto"
             >
               {history.map((item) => (
