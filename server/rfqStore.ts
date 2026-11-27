@@ -31,9 +31,10 @@ export interface PersistedRfqEntry {
 }
 
 export interface StorageBackendInfo {
-  backend: 'vercel-kv' | 'upstash-redis' | 'local-json' | 'vercel-tmp-ephemeral' | 'none';
+  backend: 'vercel-kv' | 'upstash-redis' | 'local-json' | 'none';
   durable: boolean;
   configuredForServerless: boolean;
+  missingConfig: string[];
 }
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days
@@ -68,22 +69,30 @@ export function getStorageBackendInfo(): StorageBackendInfo {
       backend: redis.backend,
       durable: true,
       configuredForServerless: true,
+      missingConfig: [],
     };
   }
 
   const isVercel = process.env.VERCEL === '1';
-  if (isVercel) {
-    if (process.env.RFQ_REQUIRE_DURABLE_STORAGE === 'true') {
-      return {
-        backend: 'none',
-        durable: false,
-        configuredForServerless: false,
-      };
+  if (isVercel || process.env.RFQ_REQUIRE_DURABLE_STORAGE === 'true') {
+    const missingConfig: string[] = [];
+    const hasAnyUrl = Boolean(
+      process.env.UPSTASH_REDIS_REST_URL?.trim() || process.env.KV_REST_API_URL?.trim()
+    );
+    const hasAnyToken = Boolean(
+      process.env.UPSTASH_REDIS_REST_TOKEN?.trim() || process.env.KV_REST_API_TOKEN?.trim()
+    );
+    if (!hasAnyUrl) {
+      missingConfig.push('UPSTASH_REDIS_REST_URL (or KV_REST_API_URL)');
+    }
+    if (!hasAnyToken) {
+      missingConfig.push('UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_TOKEN)');
     }
     return {
-      backend: 'vercel-tmp-ephemeral',
+      backend: 'none',
       durable: false,
       configuredForServerless: false,
+      missingConfig,
     };
   }
 
@@ -91,13 +100,11 @@ export function getStorageBackendInfo(): StorageBackendInfo {
     backend: 'local-json',
     durable: true,
     configuredForServerless: false,
+    missingConfig: [],
   };
 }
 
 function getLocalStorePath(): string {
-  if (process.env.VERCEL === '1') {
-    return path.join('/tmp', 'astrateq-rfq-submissions.json');
-  }
   return path.resolve(process.cwd(), 'data', 'rfq-submissions.json');
 }
 
@@ -253,7 +260,7 @@ export async function generateUniqueQuoteId(storefrontCode: string): Promise<str
   const info = getStorageBackendInfo();
   const usedIds = new Set<string>();
 
-  if (info.backend === 'local-json' || info.backend === 'vercel-tmp-ephemeral') {
+  if (info.backend === 'local-json') {
     const existing = await readLocalEntries();
     for (const item of existing) {
       usedIds.add(item.quoteId);

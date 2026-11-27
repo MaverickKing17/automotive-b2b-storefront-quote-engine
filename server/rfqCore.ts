@@ -522,11 +522,22 @@ export async function processRfqSubmission(rawBody: unknown): Promise<RfqProcess
     };
 
     const emailConfig = getEmailRoutingConfig(storefrontMeta.id);
+    const combinedMissingConfig = [
+      ...emailConfig.missingConfig,
+      ...storageInfo.missingConfig,
+    ];
 
-    if (!emailConfig.configured) {
-      const configErrorMessage = `RFQ email routing is not configured. Missing: ${emailConfig.missingConfig.join(', ')}.`;
+    if (!emailConfig.configured || !storageInfo.durable) {
+      const reasons: string[] = [];
+      if (!emailConfig.configured) {
+        reasons.push(`Email routing missing: ${emailConfig.missingConfig.join(', ')}`);
+      }
+      if (!storageInfo.durable) {
+        reasons.push(`Durable idempotency storage missing: ${storageInfo.missingConfig.join(', ')}`);
+      }
+      const configErrorMessage = `RFQ configuration incomplete. ${reasons.join('; ')}.`;
       const emailDeliveryMeta: PersistedEmailDeliveryMeta = {
-        configured: false,
+        configured: emailConfig.configured,
         attempted: false,
         delivered: false,
         error: configErrorMessage,
@@ -545,7 +556,9 @@ export async function processRfqSubmission(rawBody: unknown): Promise<RfqProcess
         emailDelivery: emailDeliveryMeta,
         payload: storedPayload,
       };
-      const recordPreserved = await saveRfqEntry(entry).catch(() => false);
+      const recordPreserved = storageInfo.durable
+        ? await saveRfqEntry(entry).catch(() => false)
+        : false;
 
       return {
         httpStatus: 503,
@@ -553,7 +566,9 @@ export async function processRfqSubmission(rawBody: unknown): Promise<RfqProcess
           ok: false,
           code: 'CONFIGURATION_ERROR' satisfies RfqOutcomeCode,
           error: configErrorMessage,
-          missingConfig: emailConfig.missingConfig,
+          missingConfig: combinedMissingConfig,
+          missingEmailConfig: emailConfig.missingConfig,
+          missingStorageConfig: storageInfo.missingConfig,
           quoteId: recordPreserved ? quoteId : undefined,
           recordPreserved,
           storageBackend: storageInfo.backend,
