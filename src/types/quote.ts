@@ -1,4 +1,4 @@
-export type FitmentStatus = 'verified' | 'requires-verification' | 'not-verified';
+export type FitmentStatus = 'verified' | 'requires-verification' | 'not-compatible';
 
 export type PowerSourceOption =
   | ''

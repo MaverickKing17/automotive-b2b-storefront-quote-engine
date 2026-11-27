@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   FileCheck2,
   Check,
+  XCircle,
 } from 'lucide-react';
 import {
   clientConfig,
@@ -55,17 +56,17 @@ function getFitmentBadgeStyles(status: FitmentStatus, theme: StorefrontTheme) {
       text: theme.badgeVerifiedText,
     };
   }
-  if (status === 'requires-verification') {
+  if (status === 'not-compatible') {
     return {
-      bg: theme.badgeWarnBg,
-      border: theme.badgeWarnBorder,
-      text: theme.badgeWarnText,
+      bg: 'rgba(239, 68, 68, 0.14)',
+      border: 'rgba(248, 113, 113, 0.45)',
+      text: theme.isLight ? '#B91C1C' : '#F87171',
     };
   }
   return {
-    bg: theme.bgElevated,
-    border: theme.borderStrong,
-    text: theme.isLight ? theme.textSecondary : '#D6DDE5',
+    bg: theme.badgeWarnBg,
+    border: theme.badgeWarnBorder,
+    text: theme.badgeWarnText,
   };
 }
 
@@ -1091,7 +1092,8 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                   vehicleGroups.map((group) => {
                                     const evalResult = evaluateVehicleFitment(
                                       group,
-                                      group.powerSource
+                                      group.powerSource,
+                                      item.sku
                                     );
                                     const badge = getFitmentBadgeStyles(evalResult.status, theme);
                                     return (
@@ -1110,10 +1112,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                                         <span className="inline-flex items-center gap-1 font-semibold">
                                           {evalResult.status === 'verified' ? (
                                             <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                                          ) : evalResult.status === 'requires-verification' ? (
-                                            <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                          ) : evalResult.status === 'not-compatible' ? (
+                                            <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
                                           ) : (
-                                            <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                                            <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                                           )}
                                           <span>{evalResult.drawerBadgeText}</span>
                                         </span>
@@ -2248,10 +2250,10 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                               >
                                 {evalResult.status === 'verified' ? (
                                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                                ) : evalResult.status === 'requires-verification' ? (
-                                  <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                ) : evalResult.status === 'not-compatible' ? (
+                                  <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
                                 ) : (
-                                  <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                                  <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                                 )}
                                 <span>{evalResult.drawerBadgeText}</span>
                               </div>

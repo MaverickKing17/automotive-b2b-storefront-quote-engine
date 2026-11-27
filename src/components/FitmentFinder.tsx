@@ -7,6 +7,7 @@ import {
   HelpCircle,
   Plus,
   Wrench,
+  XCircle,
 } from 'lucide-react';
 import {
   clientConfig,
@@ -442,7 +443,19 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>{result.headlineBadge}</span>
                 </span>
-              ) : result.status === 'requires-verification' ? (
+              ) : result.status === 'not-compatible' ? (
+                <span
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                    borderColor: 'rgba(248, 113, 113, 0.45)',
+                    color: theme.isLight ? '#B91C1C' : '#F87171',
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
+                >
+                  <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>{result.headlineBadge}</span>
+                </span>
+              ) : (
                 <span
                   style={{
                     backgroundColor: theme.badgeWarnBg,
@@ -451,19 +464,11 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                   }}
                   className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>{result.headlineBadge}</span>
-                </span>
-              ) : (
-                <span
-                  style={{
-                    backgroundColor: isHorizontal ? theme.bgElevated : '#152236',
-                    borderColor: theme.borderStrong,
-                    color: theme.textSecondary,
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                  {result.reason === 'missing compatibility data' ? (
+                    <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                  ) : (
+                    <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                  )}
                   <span>{result.headlineBadge}</span>
                 </span>
               )}

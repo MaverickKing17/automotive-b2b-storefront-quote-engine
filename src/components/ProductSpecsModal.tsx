@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { X, Plus, CheckCircle2, AlertTriangle, HelpCircle } from 'lucide-react';
+import { X, Plus, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import {
   evaluateVehicleFitment,
   formatCad,
+  getNormalizedProductMetadata,
   type CatalogProduct,
 } from '../data/clientConfig';
 import type { StorefrontTheme } from '../data/storefronts';
@@ -35,11 +36,12 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
   if (!product) return null;
 
   const infoColor = theme.isLight ? theme.accentPrimary : theme.accentInfo;
+  const meta = getNormalizedProductMetadata(product);
 
   const isDepotProduct = product.category === 'EV Power & Diagnostics';
   const groupEvaluations = vehicleGroups.map((g) => ({
     group: g,
-    eval: evaluateVehicleFitment(g, g.powerSource),
+    eval: evaluateVehicleFitment(g, g.powerSource, product.sku),
   }));
 
   return (
@@ -109,32 +111,36 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
               >
                 <div>
                   <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
+                    Model ID:{' '}
+                  </span>
+                  <span style={{ color: theme.textPrimary }}>{meta.model}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
                     Manufacturer / Supplier:{' '}
                   </span>
-                  <span style={{ color: theme.textPrimary }}>
-                    {product.manufacturer || 'Demonstration catalogue (supplier assignment pending)'}
-                  </span>
+                  <span style={{ color: theme.textPrimary }}>{meta.manufacturer}</span>
                 </div>
                 <div>
                   <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
                     Installation:{' '}
                   </span>
-                  <span style={{ color: theme.textPrimary }}>
-                    {product.installationNote ||
-                      `Verify ${product.specs.power} power & ${product.specs.interface} interface prior to deployment.`}
+                  <span style={{ color: theme.textPrimary }}>{meta.installationRequirements}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
+                    Accessories:{' '}
+                  </span>
+                  <span style={{ color: theme.textPrimary }}>{meta.accessoryRequirements.note}</span>
+                </div>
+                <div>
+                  <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
+                    Approval Status:{' '}
+                  </span>
+                  <span style={{ color: theme.badgeWarnText }}>
+                    Demonstration sample data only — no supplier-approved certifications or binding OEM fitment attached.
                   </span>
                 </div>
-                {product.recommendedHarnessSku && (
-                  <div>
-                    <span style={{ color: theme.textMuted }} className="font-mono-tech uppercase">
-                      Recommended Harness:{' '}
-                    </span>
-                    <span style={{ color: infoColor }} className="font-mono-tech font-semibold">
-                      {product.recommendedHarnessSku}
-                    </span>
-                    <span style={{ color: theme.textSecondary }}> (pinout verified at RFQ)</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -151,20 +157,16 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
               style={{ backgroundColor: theme.bgSurface, borderColor: theme.border }}
               className="border p-3.5 text-xs space-y-2"
             >
-              {isDepotProduct ? (
+              {isDepotProduct && groupEvaluations.length === 0 ? (
+                <div className="flex items-start gap-2" style={{ color: theme.badgeWarnText }}>
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span>{meta.compatibilityProfile.scopeNote}</span>
+                </div>
+              ) : groupEvaluations.length === 0 ? (
                 <div className="flex items-start gap-2" style={{ color: theme.badgeWarnText }}>
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                   <span>
-                    Requires confirmation — stationary EV depot controller; compatibility depends on
-                    site electrical service and OCPP 1.6 network topology rather than vehicle chassis.
-                  </span>
-                </div>
-              ) : groupEvaluations.length === 0 ? (
-                <div className="flex items-start gap-2" style={{ color: theme.textSecondary }}>
-                  <HelpCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-                  <span>
-                    Not yet verified — no vehicle group attached. Select your vehicle in the Fitment
-                    Finder or Quote Drawer to check against the sample fitment matrix.
+                    Requires confirmation — no vehicle group attached. {meta.compatibilityProfile.scopeNote}
                   </span>
                 </div>
               ) : (
@@ -182,18 +184,20 @@ export const ProductSpecsModal: React.FC<ProductSpecsModalProps> = ({
                         color:
                           res.status === 'verified'
                             ? theme.badgeVerifiedText
-                            : res.status === 'requires-verification'
-                              ? theme.badgeWarnText
-                              : theme.textSecondary,
+                            : res.status === 'not-compatible'
+                              ? theme.isLight
+                                ? '#B91C1C'
+                                : '#F87171'
+                              : theme.badgeWarnText,
                       }}
                       className="inline-flex items-center gap-1 font-mono-tech font-semibold"
                     >
                       {res.status === 'verified' ? (
                         <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      ) : res.status === 'requires-verification' ? (
-                        <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                      ) : res.status === 'not-compatible' ? (
+                        <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
                       ) : (
-                        <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                        <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                       )}
                       <span>{res.headlineBadge}</span>
                     </span>

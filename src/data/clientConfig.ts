@@ -14,8 +14,22 @@ export interface ProductSpecItem {
   value: string;
 }
 
+export interface ProductAccessoryRequirements {
+  required: boolean;
+  recommendedSku?: string;
+  note: string;
+}
+
+export interface ProductCompatibilityProfile {
+  defaultStatus: FitmentStatus;
+  deploymentEnvironment: 'on-vehicle' | 'stationary-depot' | 'accessory-harness';
+  scopeNote: string;
+  incompatibleReason?: string;
+}
+
 export interface CatalogProduct {
   sku: string;
+  model?: string;
   name: string;
   category: string;
   unitLabel: 'unit' | 'bundle';
@@ -23,6 +37,9 @@ export interface CatalogProduct {
   imageUrl: string;
   manufacturer?: string;
   installationNote?: string;
+  installationRequirements?: string;
+  accessoryRequirements?: ProductAccessoryRequirements;
+  compatibilityProfile?: ProductCompatibilityProfile;
   specs: {
     power: string;
     interface: string;
@@ -47,6 +64,8 @@ export interface CompatibilityMatrixEntry {
   model: string;
   vehicleClass: string;
   status: FitmentStatus;
+  compatibleSkus?: string[];
+  incompatibleSkus?: string[];
   recommendedHarnessSku?: string;
   notes: string;
 }
@@ -128,11 +147,25 @@ export const clientConfig = {
   products: [
     {
       sku: 'AST-104',
+      model: 'AST-104 (Demo Sample Dashcam)',
       name: 'AST-104 Dual-Lens AI Fleet Dashcam',
       category: 'Video Telematics',
       unitLabel: 'unit',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
-      installationNote: 'Requires 12V/24V vehicle power verification; AST-640 harness recommended where pinout applies.',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
+      installationNote: 'Requires 12V/24V vehicle power verification; AST-640 harness optional where pinout applies.',
+      installationRequirements:
+        'Sample requirement: 12V/24V vehicle power check and cabin/windshield placement. Vehicle-specific wiring pinout and mounting guide require supplier confirmation.',
+      accessoryRequirements: {
+        required: false,
+        recommendedSku: 'AST-640',
+        note: 'Optional sample accessory: AST-640 wiring harness bundle (final connector compatibility confirmed by supplier at RFQ).',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'on-vehicle',
+        scopeNote:
+          'Sample matrix entry exists only for 2025 Rivian EDV 700 (Commercial EV). All other vehicles require supplier confirmation.',
+      },
       description: 'Road-facing and driver-cabin event camera with cellular clip offload.',
       imageUrl: '/src/assets/images/prod_ast104_dashcam_1795290659601.jpg',
       specs: {
@@ -142,11 +175,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-104' },
+        { label: 'Model', value: 'AST-104 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'Video Telematics' },
-        { label: 'Power Input', value: '12V/24V' },
+        { label: 'Power Input (Nominal)', value: '12V/24V' },
         { label: 'Connectivity / Interface', value: '4G LTE · Wi-Fi' },
         { label: 'Ingress Protection', value: 'IP67' },
-        { label: 'Pricing Basis', value: 'Per unit (CAD)' },
+        { label: 'Pricing Basis', value: 'Per unit (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 349 },
@@ -165,11 +200,25 @@ export const clientConfig = {
     },
     {
       sku: 'AST-208',
+      model: 'AST-208 (Demo Sample Gateway)',
       name: 'AST-208 J1939 / OBD-II Telematics Gateway',
       category: 'Fleet ELD & GPS',
       unitLabel: 'unit',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
-      installationNote: 'Requires OBD-II or J1939 port check; AST-640 harness recommended for heavy-duty pinouts.',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
+      installationNote: 'Requires OBD-II or J1939 port check; AST-640 harness optional for heavy-duty pinouts.',
+      installationRequirements:
+        'Sample requirement: OBD-II or J1939 diagnostic port access and 9–32V DC supply check. Vehicle-specific pinout requires supplier confirmation.',
+      accessoryRequirements: {
+        required: false,
+        recommendedSku: 'AST-640',
+        note: 'Optional sample accessory: AST-640 wiring harness bundle (final connector compatibility confirmed by supplier at RFQ).',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'on-vehicle',
+        scopeNote:
+          'No vehicles are pre-verified for AST-208 in the published sample matrix; supplier confirmation is required.',
+      },
       description: 'Commercial vehicle bus bridge for ELD compliance, fault telemetry, and GPS tracking.',
       imageUrl: '/src/assets/images/prod_ast208_gateway_1795290660444.jpg',
       specs: {
@@ -179,11 +228,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-208' },
+        { label: 'Model', value: 'AST-208 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'Fleet ELD & GPS' },
-        { label: 'Power Input', value: '9–32V DC' },
+        { label: 'Power Input Range', value: '9–32V DC' },
         { label: 'Vehicle Interface', value: 'OBD-II / J1939' },
         { label: 'Ingress Protection', value: 'IP54' },
-        { label: 'Pricing Basis', value: 'Per unit (CAD)' },
+        { label: 'Pricing Basis', value: 'Per unit (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 279 },
@@ -202,11 +253,25 @@ export const clientConfig = {
     },
     {
       sku: 'AST-316',
+      model: 'AST-316 (Demo Sample Radar Kit)',
       name: 'AST-316 Blind-Spot Radar Retrofit Kit',
       category: 'ADAS Retrofits',
       unitLabel: 'unit',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
       installationNote: 'Requires 12V/24V CAN & discrete I/O integration; installer coordination recommended.',
+      installationRequirements:
+        'Sample requirement: Exterior side-body sensor mounting, 12V/24V power, and CAN / discrete I/O integration. Chassis-specific brackets and wiring require supplier confirmation.',
+      accessoryRequirements: {
+        required: false,
+        recommendedSku: 'AST-640',
+        note: 'Optional sample accessory: AST-640 wiring harness bundle (chassis-specific harness compatibility requires supplier confirmation).',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'on-vehicle',
+        scopeNote:
+          'No vehicles are pre-verified for AST-316 in the published sample matrix; supplier confirmation is required.',
+      },
       description: 'Side-zone blind-spot detection retrofit kit engineered for commercial chassis.',
       imageUrl: '/src/assets/images/prod_ast316_radar_1795290659543.jpg',
       specs: {
@@ -216,11 +281,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-316' },
+        { label: 'Model', value: 'AST-316 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'ADAS Retrofits' },
-        { label: 'Power Input', value: '12V/24V' },
+        { label: 'Power Input (Nominal)', value: '12V/24V' },
         { label: 'Signal Interface', value: 'CAN · discrete I/O' },
         { label: 'Ingress Protection', value: 'IP67 sensors' },
-        { label: 'Pricing Basis', value: 'Per unit (CAD)' },
+        { label: 'Pricing Basis', value: 'Per unit (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 499 },
@@ -239,11 +306,26 @@ export const clientConfig = {
     },
     {
       sku: 'AST-422',
+      model: 'AST-422 (Demo Sample Depot Controller)',
       name: 'AST-422 EV Fleet Depot Charger Controller',
       category: 'EV Power & Diagnostics',
       unitLabel: 'unit',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
       installationNote: 'Stationary depot controller requiring wide-range DC and wired OCPP 1.6 Ethernet review.',
+      installationRequirements:
+        'Sample requirement: Stationary EV depot installation with wide-range DC supply and wired Ethernet for OCPP 1.6. Site electrical specs require supplier engineering confirmation.',
+      accessoryRequirements: {
+        required: false,
+        note: 'No vehicle harness accessory is listed in the demonstration catalogue for AST-422. Stationary depot electrical hardware requirements must be confirmed by the supplier.',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'stationary-depot',
+        scopeNote:
+          'Stationary depot infrastructure hardware (not for in-vehicle chassis mounting). Depot electrical service and OCPP 1.6 compatibility require supplier confirmation.',
+        incompatibleReason:
+          'AST-422 is a stationary EV depot charger controller and is not compatible with in-vehicle chassis mounting.',
+      },
       description: 'Depot charging controller with OCPP 1.6 session telemetry and wired Ethernet uplink.',
       imageUrl: '/src/assets/images/prod_ast422_ev_controller_1795290660817.jpg',
       specs: {
@@ -253,11 +335,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-422' },
+        { label: 'Model', value: 'AST-422 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'EV Power & Diagnostics' },
-        { label: 'Power Input', value: 'wide-range DC' },
+        { label: 'Power Input', value: 'wide-range DC (exact limits unpublished)' },
         { label: 'Control Interface', value: 'OCPP 1.6 · Ethernet' },
         { label: 'Ingress Protection', value: 'IP65' },
-        { label: 'Pricing Basis', value: 'Per unit (CAD)' },
+        { label: 'Pricing Basis', value: 'Per unit (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 749 },
@@ -275,11 +359,25 @@ export const clientConfig = {
     },
     {
       sku: 'AST-537',
+      model: 'AST-537 (Demo Sample Fatigue Sensor)',
       name: 'AST-537 Cabin Driver-Fatigue Sensor',
       category: 'Video Telematics',
       unitLabel: 'unit',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
       installationNote: 'Requires 12V/24V cabin mounting & CAN/USB-C check; AST-640 harness optional.',
+      installationRequirements:
+        'Sample requirement: In-cab mounting with 12V/24V power and CAN or USB-C interface verification. Vehicle-specific mounting and wiring require supplier confirmation.',
+      accessoryRequirements: {
+        required: false,
+        recommendedSku: 'AST-640',
+        note: 'Optional sample accessory: AST-640 wiring harness bundle (cabin connector pinout requires supplier confirmation).',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'on-vehicle',
+        scopeNote:
+          'No vehicles are pre-verified for AST-537 in the published sample matrix; supplier confirmation is required.',
+      },
       description: 'In-cab driver attentiveness and drowsiness alert sensor with CAN bus output.',
       imageUrl: '/src/assets/images/prod_ast537_fatigue_sensor_1795290659283.jpg',
       specs: {
@@ -289,11 +387,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-537' },
+        { label: 'Model', value: 'AST-537 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'Video Telematics' },
-        { label: 'Power Input', value: '12V/24V' },
+        { label: 'Power Input (Nominal)', value: '12V/24V' },
         { label: 'Interface', value: 'CAN · USB-C' },
         { label: 'Ingress Protection', value: 'IP54' },
-        { label: 'Pricing Basis', value: 'Per unit (CAD)' },
+        { label: 'Pricing Basis', value: 'Per unit (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 419 },
@@ -312,11 +412,24 @@ export const clientConfig = {
     },
     {
       sku: 'AST-640',
+      model: 'AST-640 (Demo Sample Harness Bundle)',
       name: 'AST-640 Heavy-Duty Wiring Harness Bundle',
       category: 'ADAS Retrofits',
       unitLabel: 'bundle',
-      manufacturer: 'Sample catalogue entry (supplier pending)',
-      installationNote: 'Vehicle-specific pinout verified against year/make/model prior to dispatch.',
+      manufacturer: 'Demonstration placeholder — supplier authorization pending',
+      installationNote: 'Vehicle-specific pinout requires supplier confirmation against year/make/model prior to dispatch.',
+      installationRequirements:
+        'Sample requirement: Interconnect harness for 12V/24V J1939 / OBD-II interfaces. Exact vehicle connector pinout requires supplier confirmation.',
+      accessoryRequirements: {
+        required: false,
+        note: 'AST-640 is itself an accessory wiring harness bundle; no additional sub-harness is listed in the demonstration catalogue.',
+      },
+      compatibilityProfile: {
+        defaultStatus: 'requires-verification',
+        deploymentEnvironment: 'accessory-harness',
+        scopeNote:
+          'Sample matrix entry exists only for 2025 Rivian EDV 700 (Commercial EV). All other vehicles require supplier pinout confirmation.',
+      },
       description: 'Sealed vehicle power and diagnostic interconnect harness bundle for fleet retrofits.',
       imageUrl: '/src/assets/images/prod_ast640_harness_1795290659605.jpg',
       specs: {
@@ -326,11 +439,13 @@ export const clientConfig = {
       },
       fullSpecs: [
         { label: 'SKU', value: 'AST-640' },
+        { label: 'Model', value: 'AST-640 (Demo Sample)' },
+        { label: 'Manufacturer', value: 'Demonstration placeholder (supplier pending)' },
         { label: 'Category', value: 'ADAS Retrofits' },
-        { label: 'Power Rating', value: '12V/24V rated' },
+        { label: 'Power Rating (Nominal)', value: '12V/24V rated' },
         { label: 'Connector Interface', value: 'J1939 · OBD-II' },
         { label: 'Connector Protection', value: 'IP67 connectors' },
-        { label: 'Pricing Basis', value: 'Per bundle (CAD)' },
+        { label: 'Pricing Basis', value: 'Per bundle (Sample CAD)' },
       ],
       tiers: [
         { id: 't1', label: '1–9 Units', minQty: 1, maxQty: 9, unitPrice: 109 },
@@ -344,7 +459,7 @@ export const clientConfig = {
           formalQuoteText: 'Subject to formal fleet quote',
         },
       ],
-      keywords: ['harness', 'wiring', 'cable', 'bundle', 'j1939', 'obd', 'ip67', 'adas', '12v', '24v'],
+      keywords: ['wiring', 'cable', 'bundle', 'j1939', 'obd', 'ip67', 'adas', '12v', '24v'],
     },
   ] satisfies CatalogProduct[],
   fitmentOptions: {
@@ -375,8 +490,11 @@ export const clientConfig = {
       model: 'EDV 700',
       vehicleClass: 'Commercial EV',
       status: 'verified',
+      compatibleSkus: ['AST-104', 'AST-640'],
+      incompatibleSkus: ['AST-422'],
       recommendedHarnessSku: 'AST-640',
-      notes: 'Published EV Port & CAN telemetry profile confirmed for 2025 Rivian EDV 700.',
+      notes:
+        'Sample matrix profile confirmed for AST-104 and AST-640 on 2025 Rivian EDV 700 (EV Port & CAN). Unlisted SKUs and final harness pinout require supplier confirmation.',
     },
     {
       year: '2025',
@@ -384,8 +502,9 @@ export const clientConfig = {
       model: 'Transit 350',
       vehicleClass: 'Cargo Van',
       status: 'requires-verification',
+      incompatibleSkus: ['AST-422'],
       recommendedHarnessSku: 'AST-640',
-      notes: 'Upfitter auxiliary connector pinout varies by factory prep package; engineering review required.',
+      notes: 'Upfitter auxiliary connector pinout varies by factory prep package; supplier engineering review required.',
     },
   ] satisfies CompatibilityMatrixEntry[],
   deploymentOptions: {
@@ -533,13 +652,56 @@ export function formatCad(amount: number): string {
   return `$${amount.toLocaleString('en-CA')} ${clientConfig.currency}`;
 }
 
+export function getNormalizedProductMetadata(product: CatalogProduct) {
+  return {
+    sku: product.sku,
+    model: product.model || `${product.sku} (Demo Sample)`,
+    manufacturer:
+      product.manufacturer || 'Demonstration placeholder — supplier authorization pending',
+    category: product.category,
+    compatibilityProfile: product.compatibilityProfile ?? {
+      defaultStatus: 'requires-verification' as FitmentStatus,
+      deploymentEnvironment: 'on-vehicle' as const,
+      scopeNote:
+        'Sample catalogue entry — vehicle compatibility requires supplier confirmation.',
+    },
+    installationRequirements:
+      product.installationRequirements ||
+      product.installationNote ||
+      `Verify ${product.specs.power} power & ${product.specs.interface} interface with supplier prior to deployment.`,
+    accessoryRequirements: product.accessoryRequirements ?? {
+      required: false,
+      recommendedSku: product.recommendedHarnessSku,
+      note: product.recommendedHarnessSku
+        ? `Optional sample accessory: ${product.recommendedHarnessSku} (supplier confirmation required at RFQ).`
+        : 'No accessory or harness requirement is listed in the demonstration catalogue.',
+    },
+  };
+}
+
 export function evaluateVehicleFitment(
   vehicle: VehicleSelection,
-  powerSource?: PowerSourceOption
+  powerSource?: PowerSourceOption,
+  productSku?: string
 ): FitmentEvaluation {
   const normalize = (v: string) => v.trim().toLowerCase();
+  const normalizedSku = productSku?.trim().toUpperCase();
+  const targetProduct = normalizedSku ? getProductBySku(normalizedSku) : undefined;
 
-  const matrixMatch = clientConfig.compatibilityMatrix.find(
+  if (targetProduct?.compatibilityProfile?.deploymentEnvironment === 'stationary-depot') {
+    return {
+      status: 'not-compatible',
+      headlineBadge: 'Not Compatible',
+      summaryText:
+        targetProduct.compatibilityProfile.incompatibleReason ||
+        `${targetProduct.sku} is stationary EV depot equipment and is not compatible with on-vehicle chassis mounting. Confirm depot electrical service at RFQ instead.`,
+      drawerBadgeText: 'Not compatible — stationary depot unit (not on-vehicle)',
+      reason: 'stationary depot equipment',
+    };
+  }
+
+  const matrix: readonly CompatibilityMatrixEntry[] = clientConfig.compatibilityMatrix;
+  const matrixMatch = matrix.find(
     (entry) =>
       normalize(entry.year) === normalize(vehicle.year) &&
       normalize(entry.make) === normalize(vehicle.make) &&
@@ -547,48 +709,81 @@ export function evaluateVehicleFitment(
       normalize(entry.vehicleClass) === normalize(vehicle.vehicleClass)
   );
 
-  // Rule: if power source is "I don't know", downgrade to requires-verification
+  // Rule: if power source is explicitly unknown, compatibility cannot be confirmed
   if (powerSource === "I don't know") {
     return {
       status: 'requires-verification',
-      headlineBadge: 'Requires confirmation',
-      summaryText: 'Vehicle power source is unknown — attach this vehicle for supplier confirmation.',
+      headlineBadge: 'Requires Confirmation',
+      summaryText:
+        'Vehicle power source is unknown — insufficient information to confirm compatibility. Attach this vehicle group for supplier confirmation.',
       drawerBadgeText: 'Requires confirmation — power source unknown',
       reason: 'power source unknown',
-      recommendedHarnessSku: matrixMatch?.recommendedHarnessSku ?? 'AST-640',
+      recommendedHarnessSku:
+        targetProduct?.recommendedHarnessSku ?? matrixMatch?.recommendedHarnessSku,
     };
   }
 
-  // Rule: verified ONLY if exact matrix entry is marked "verified"
-  if (matrixMatch && matrixMatch.status === 'verified') {
-    return {
-      status: 'verified',
-      headlineBadge: 'Verified',
-      summaryText: `${matrixMatch.notes} Sample fitment matrix match — confirm final harness pinout at RFQ.`,
-      drawerBadgeText: 'Verified — sample fitment matrix',
-      recommendedHarnessSku: matrixMatch.recommendedHarnessSku ?? 'AST-640',
-    };
-  }
+  if (matrixMatch) {
+    // Explicit incompatibility in approved/sample compatibility data
+    if (
+      matrixMatch.status === 'not-compatible' ||
+      (normalizedSku && matrixMatch.incompatibleSkus?.includes(normalizedSku))
+    ) {
+      return {
+        status: 'not-compatible',
+        headlineBadge: 'Not Compatible',
+        summaryText: `${matrixMatch.notes} (${normalizedSku || 'Selected product'} is marked Not Compatible for ${vehicle.year} ${vehicle.make} ${vehicle.model}.)`,
+        drawerBadgeText: 'Not compatible — recorded incompatibility',
+        reason: 'explicit incompatibility in sample matrix',
+      };
+    }
 
-  // Rule: matrix entry explicitly marked requires-verification
-  if (matrixMatch && matrixMatch.status === 'requires-verification') {
+    // Verified entry — only verified if SKU is also within approved scope (never inferred!)
+    if (matrixMatch.status === 'verified') {
+      if (
+        normalizedSku &&
+        matrixMatch.compatibleSkus &&
+        !matrixMatch.compatibleSkus.includes(normalizedSku)
+      ) {
+        return {
+          status: 'requires-verification',
+          headlineBadge: 'Requires Confirmation',
+          summaryText: `${normalizedSku} is not listed as verified for ${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.vehicleClass}). Compatibility cannot be inferred from other SKUs; supplier confirmation is required.`,
+          drawerBadgeText: 'Requires confirmation — SKU not verified for this vehicle',
+          reason: 'sku outside verified matrix scope',
+          recommendedHarnessSku: targetProduct?.recommendedHarnessSku,
+        };
+      }
+
+      return {
+        status: 'verified',
+        headlineBadge: 'Verified',
+        summaryText: `${matrixMatch.notes}`,
+        drawerBadgeText: 'Verified — sample fitment matrix',
+        recommendedHarnessSku:
+          targetProduct?.recommendedHarnessSku ?? matrixMatch.recommendedHarnessSku,
+      };
+    }
+
+    // Conditional entry requiring confirmation
     return {
       status: 'requires-verification',
-      headlineBadge: 'Requires confirmation',
-      summaryText: matrixMatch.notes,
-      drawerBadgeText: 'Requires confirmation — upfitter pinout varies',
+      headlineBadge: 'Requires Confirmation',
+      summaryText: `${matrixMatch.notes} Supplier confirmation is required before deployment.`,
+      drawerBadgeText: 'Requires confirmation — conditional vehicle profile',
       reason: 'conditional fitment in matrix',
-      recommendedHarnessSku: matrixMatch.recommendedHarnessSku ?? 'AST-640',
+      recommendedHarnessSku:
+        targetProduct?.recommendedHarnessSku ?? matrixMatch.recommendedHarnessSku,
     };
   }
 
-  // Default with NO matrix entry is ALWAYS not-verified
+  // Missing compatibility data ALWAYS resolves to Requires Confirmation — never Verified and never inferred
   return {
-    status: 'not-verified',
-    headlineBadge: 'Not yet verified',
+    status: 'requires-verification',
+    headlineBadge: 'Requires Confirmation',
     summaryText:
-      'Not in the published sample fitment matrix. Attach this vehicle group to flag it for supplier engineering confirmation.',
-    drawerBadgeText: 'Not yet verified — supplier confirmation required',
-    recommendedHarnessSku: 'AST-640',
+      'Compatibility data is missing for this exact year/make/model/class in the published sample matrix and cannot be inferred from similar vehicles. Supplier engineering confirmation is required.',
+    drawerBadgeText: 'Requires confirmation — missing compatibility data',
+    reason: 'missing compatibility data',
   };
 }

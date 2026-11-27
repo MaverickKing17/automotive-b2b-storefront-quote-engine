@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, FileText, CheckCircle2, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Plus, FileText, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import {
   clientConfig,
   evaluateVehicleFitment,
   formatCad,
+  getNormalizedProductMetadata,
   getTier1Price,
   type CatalogProduct,
 } from '../data/clientConfig';
@@ -35,33 +36,39 @@ function getCardCompatibilityState(
   vehicleGroups: VehicleGroup[]
 ): { status: FitmentStatus; label: string } {
   if (product.category === 'EV Power & Diagnostics') {
+    if (vehicleGroups.length > 0) {
+      return {
+        status: 'not-compatible',
+        label: 'Not compatible on-vehicle (depot unit)',
+      };
+    }
     return {
       status: 'requires-verification',
-      label: 'Requires confirmation (depot site / OCPP check)',
+      label: 'Requires confirmation (depot site / OCPP)',
     };
   }
   if (vehicleGroups.length === 0) {
     return {
-      status: 'not-verified',
-      label: 'Not yet verified — select vehicle',
+      status: 'requires-verification',
+      label: 'Requires confirmation — select vehicle',
     };
   }
-  const evals = vehicleGroups.map((g) => evaluateVehicleFitment(g, g.powerSource));
+  const evals = vehicleGroups.map((g) => evaluateVehicleFitment(g, g.powerSource, product.sku));
+  if (evals.some((e) => e.status === 'not-compatible')) {
+    return {
+      status: 'not-compatible',
+      label: 'Not compatible with attached vehicle',
+    };
+  }
   if (evals.every((e) => e.status === 'verified')) {
     return {
       status: 'verified',
       label: `Verified (${vehicleGroups.length} ${vehicleGroups.length === 1 ? 'group' : 'groups'})`,
     };
   }
-  if (evals.some((e) => e.status === 'requires-verification' || e.status === 'verified')) {
-    return {
-      status: 'requires-verification',
-      label: 'Requires confirmation for attached fleet',
-    };
-  }
   return {
-    status: 'not-verified',
-    label: 'Not yet verified for attached vehicle',
+    status: 'requires-verification',
+    label: 'Requires confirmation for attached fleet',
   };
 }
 
@@ -366,32 +373,34 @@ export const HardwareCatalog: React.FC<HardwareCatalogProps> = ({
                               color:
                                 compat.status === 'verified'
                                   ? theme.badgeVerifiedText
-                                  : compat.status === 'requires-verification'
-                                    ? theme.badgeWarnText
-                                    : '#D6DDE5',
+                                  : compat.status === 'not-compatible'
+                                    ? '#F87171'
+                                    : theme.badgeWarnText,
                             }}
                             className="inline-flex items-center gap-1 font-semibold text-right"
                           >
                             {compat.status === 'verified' ? (
                               <CheckCircle2 className="w-3 h-3 shrink-0" aria-hidden="true" />
-                            ) : compat.status === 'requires-verification' ? (
-                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            ) : compat.status === 'not-compatible' ? (
+                              <XCircle className="w-3 h-3 shrink-0" aria-hidden="true" />
                             ) : (
-                              <HelpCircle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                              <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
                             )}
                             <span>{compat.label}</span>
                           </span>
                         </div>
-                        {product.recommendedHarnessSku && (
-                          <div className="flex items-center justify-between gap-2">
-                            <span style={{ color: '#A8B3BF' }} className="uppercase">
-                              Accessory
-                            </span>
-                            <span style={{ color: '#D6DDE5' }}>
-                              {product.recommendedHarnessSku} harness (optional)
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ color: '#A8B3BF' }} className="uppercase">
+                            Accessory
+                          </span>
+                          <span style={{ color: '#D6DDE5' }} className="text-right">
+                            {product.recommendedHarnessSku
+                              ? `${product.recommendedHarnessSku} harness (optional)`
+                              : getNormalizedProductMetadata(product).accessoryRequirements.required
+                                ? 'Required (supplier check)'
+                                : 'None listed in demo'}
+                          </span>
+                        </div>
                         <div className="flex items-center justify-between gap-2">
                           <span style={{ color: '#A8B3BF' }} className="uppercase">
                             Supplier
