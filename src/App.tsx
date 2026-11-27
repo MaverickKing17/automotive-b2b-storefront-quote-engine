@@ -85,7 +85,7 @@ function isValidSubmittedRecord(record: unknown): record is SubmittedRfqRecord {
   if (!record || typeof record !== 'object') return false;
   const r = record as Partial<SubmittedRfqRecord>;
   return (
-    (r.mode === 'backend-api' || r.mode === 'webhook') &&
+    (r.mode === 'backend-api' || r.mode === 'email-routed' || r.mode === 'webhook') &&
     typeof r.idempotencyKey === 'string' &&
     typeof r.submittedAt === 'string' &&
     typeof r.deliveryStatus === 'string' &&

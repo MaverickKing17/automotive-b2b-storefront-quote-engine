@@ -79,9 +79,12 @@ export interface SubmittedRfqRecord {
   quoteId?: string;
   idempotencyKey: string;
   submittedAt: string;
-  mode: 'backend-api' | 'webhook';
+  mode: 'backend-api' | 'email-routed' | 'webhook';
   deliveryStatus: string;
   externalDeliveryConfigured: boolean;
+  emailDelivered?: boolean;
+  emailRecipient?: string;
+  missingEmailConfig?: string[];
   payload: Record<string, unknown>;
 }
 

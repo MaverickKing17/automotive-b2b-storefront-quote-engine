@@ -314,12 +314,59 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
       return;
     }
 
+    if (phone.replace(/\D/g, '').length < 7) {
+      setStep2Error('Enter a valid telephone number (at least 7 digits).');
+      return;
+    }
+
     onSetStep(3);
   };
 
   const handleSubmitRfq = async () => {
     if (isSubmitting) return;
     setSubmitError(null);
+
+    if (lineItems.length === 0 && vehicleGroups.length === 0 && !installationRequested) {
+      setSubmitError(
+        'Cannot submit an empty RFQ. Add at least one hardware item or vehicle group in Step 1. Your entered data has been preserved.'
+      );
+      return;
+    }
+
+    const missingPowerGroup = vehicleGroups.find((g) => !g.powerSource);
+    if (missingPowerGroup) {
+      setSubmitError(
+        `Select the required power source for ${missingPowerGroup.year} ${missingPowerGroup.make} ${missingPowerGroup.model} before submitting. Your entered data has been preserved.`
+      );
+      return;
+    }
+
+    const trimmedName = contact.fullName.trim();
+    const trimmedCompany = contact.companyName.trim();
+    const trimmedEmail = contact.workEmail.trim();
+    const trimmedPhone = contact.phone.trim();
+
+    if (!trimmedName || !trimmedCompany || !trimmedEmail || !trimmedPhone) {
+      setSubmitError(
+        'Complete all required contact fields (Full name, Company name, Work email, and Phone) before submitting. Your entered data has been preserved.'
+      );
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setSubmitError(
+        'Enter a valid business email address before submitting. Your entered data has been preserved.'
+      );
+      return;
+    }
+
+    if (trimmedPhone.replace(/\D/g, '').length < 7) {
+      setSubmitError(
+        'Enter a valid telephone number (at least 7 digits) before submitting. Your entered data has been preserved.'
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     const computedLines = lineItems.map((item) => {
@@ -382,12 +429,15 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
 
     const externalWebhook = clientConfig.webhookUrl.trim();
     const targetEndpoint = externalWebhook || '/api/rfq';
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
     try {
       const response = await fetch(targetEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       let responseData: Record<string, unknown> | null = null;
@@ -443,25 +493,67 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
           ? ((responseData.record as { payload: Record<string, unknown> }).payload)
           : payload;
 
+      const emailDeliveryObj =
+        responseData &&
+        typeof responseData.emailDelivery === 'object' &&
+        responseData.emailDelivery !== null
+          ? (responseData.emailDelivery as {
+              configured?: boolean;
+              attempted?: boolean;
+              delivered?: boolean;
+              recipientMasked?: string;
+              missingConfig?: unknown;
+            })
+          : undefined;
+
       const externalConfigured = Boolean(externalWebhook);
+      const emailDelivered = Boolean(emailDeliveryObj?.delivered);
+      const missingEmailConfig = Array.isArray(emailDeliveryObj?.missingConfig)
+        ? emailDeliveryObj.missingConfig.filter((item): item is string => typeof item === 'string')
+        : undefined;
+      const emailRecipient =
+        typeof emailDeliveryObj?.recipientMasked === 'string'
+          ? emailDeliveryObj.recipientMasked
+          : undefined;
+
+      const mode: SubmittedRfqRecord['mode'] = externalConfigured
+        ? 'webhook'
+        : emailDelivered
+          ? 'email-routed'
+          : 'backend-api';
+
+      const deliveryStatus = externalConfigured
+        ? 'Delivered to configured supplier webhook endpoint.'
+        : emailDelivered
+          ? `Quotation summary emailed to designated ${storefront.brandName} RFQ recipient${emailRecipient ? ` (${emailRecipient})` : ''} and persisted on the intake server.`
+          : 'Persisted to local Express intake store (/api/rfq → data/rfq-submissions.json) only. No email was dispatched because server email routing credentials are not configured.';
+
       onSetSubmittedRecord({
         quoteId: returnedQuoteId,
         idempotencyKey: draftIdempotencyKey,
         submittedAt: persistedAt,
-        mode: externalConfigured ? 'webhook' : 'backend-api',
-        deliveryStatus: externalConfigured
-          ? 'Delivered to configured supplier webhook endpoint.'
-          : 'Persisted on local Express intake server (/api/rfq → data/rfq-submissions.json). External supplier email, CRM, and ERP forwarding are not configured in this demo environment.',
-        externalDeliveryConfigured: externalConfigured,
+        mode,
+        deliveryStatus,
+        externalDeliveryConfigured: externalConfigured || emailDelivered,
+        emailDelivered,
+        emailRecipient,
+        missingEmailConfig,
         payload: persistedRecordPayload,
       });
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Unable to reach the quotation intake server. Your entered quote data has been preserved; please try again.';
-      setSubmitError(message);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setSubmitError(
+          'Request timed out after 15 seconds while waiting for the intake server. Your entered quote data has been preserved; please retry.'
+        );
+      } else {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Unable to reach the quotation intake server. Your entered quote data has been preserved; please try again.';
+        setSubmitError(message);
+      }
     } finally {
+      window.clearTimeout(timeoutId);
       setIsSubmitting(false);
     }
   };
@@ -606,32 +698,46 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                   : contact;
               const summaryLine = formatSubmittedSummary(storefront, submittedRecord.payload);
               const isWebhook = submittedRecord.mode === 'webhook';
+              const isEmailRouted =
+                submittedRecord.mode === 'email-routed' || submittedRecord.emailDelivered === true;
 
               return (
                 <div className="space-y-5" data-testid="rfq-confirmation">
                   <div
                     style={{
                       backgroundColor: theme.bgSurface,
-                      borderColor: theme.badgeVerifiedBorder,
+                      borderColor:
+                        isWebhook || isEmailRouted
+                          ? theme.badgeVerifiedBorder
+                          : theme.badgeWarnBorder,
                     }}
                     className="border p-5 space-y-3"
                   >
                     <div
-                      style={{ color: infoColor }}
+                      style={{
+                        color:
+                          isWebhook || isEmailRouted
+                            ? theme.badgeVerifiedText
+                            : theme.badgeWarnText,
+                      }}
                       className="flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider"
                     >
                       <FileCheck2 className="w-4 h-4" aria-hidden="true" />
                       <span>
                         {isWebhook
                           ? 'Supplier Webhook Delivered'
-                          : 'Intake Server Persistence'}
+                          : isEmailRouted
+                            ? 'Supplier Email Delivered'
+                            : 'Local Intake Recorded · Email Routing Not Configured'}
                       </span>
                     </div>
 
                     <h3 className="font-display text-xl font-bold">
                       {isWebhook
                         ? 'Quotation request delivered'
-                        : 'Quotation request recorded on intake server'}
+                        : isEmailRouted
+                          ? 'Quotation request submitted and emailed'
+                          : 'Quotation request recorded locally (email not sent)'}
                     </h3>
 
                     {submittedRecord.quoteId && (
@@ -672,9 +778,25 @@ export const QuoteDrawer: React.FC<QuoteDrawerProps> = ({
                       {submittedRecord.deliveryStatus}
                     </p>
 
+                    {!isWebhook &&
+                      !isEmailRouted &&
+                      submittedRecord.missingEmailConfig &&
+                      submittedRecord.missingEmailConfig.length > 0 && (
+                        <div
+                          style={{
+                            backgroundColor: theme.badgeWarnBg,
+                            borderColor: theme.badgeWarnBorder,
+                            color: theme.badgeWarnText,
+                          }}
+                          className="border px-3 py-2 text-xs font-mono-tech"
+                        >
+                          Missing server email config: {submittedRecord.missingEmailConfig.join(', ')}
+                        </div>
+                      )}
+
                     <p style={{ color: theme.textMuted }} className="text-xs font-mono-tech">
-                      Demonstration storefront — no commercial order has been placed and no automated
-                      email dispatch is active without external webhook/SMTP configuration.
+                      Demonstration storefront — no commercial order or checkout payment has been
+                      processed.
                     </p>
                   </div>
 

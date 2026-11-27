@@ -68,7 +68,6 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
   const handleMakeChange = (nextMake: string) => {
     setMake(nextMake);
     setModel('');
-    setVehicleClass('');
     setResult(null);
     setAttachedNotice(null);
     setHarnessAddedNotice(false);
@@ -218,7 +217,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={year}
                 onChange={(e) => handleYearChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                className="w-full h-9 rounded-lg border px-2.5 text-xs"
               >
                 <option value="">Select Year</option>
                 {clientConfig.fitmentOptions.years.map((y) => (
@@ -242,7 +241,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={make}
                 onChange={(e) => handleMakeChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                className="w-full h-9 rounded-lg border px-2.5 text-xs"
               >
                 <option value="">Select Make</option>
                 {clientConfig.fitmentOptions.makes.map((m) => (
@@ -266,7 +265,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={model}
                 onChange={(e) => handleModelChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                className="w-full h-9 rounded-lg border px-2.5 text-xs"
               >
                 <option value="">Select Model</option>
                 {availableModels.map((mod) => (
@@ -290,7 +289,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={vehicleClass}
                 onChange={(e) => handleClassChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-9 rounded-lg border px-2.5 text-xs focus:outline-none"
+                className="w-full h-9 rounded-lg border px-2.5 text-xs"
               >
                 <option value="">Select Class</option>
                 {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
@@ -326,7 +325,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={year}
                 onChange={(e) => handleYearChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:border-[#22D3EE]"
               >
                 <option value="">Select Year</option>
                 {clientConfig.fitmentOptions.years.map((y) => (
@@ -350,7 +349,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={make}
                 onChange={(e) => handleMakeChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:border-[#22D3EE]"
               >
                 <option value="">Select Make</option>
                 {clientConfig.fitmentOptions.makes.map((m) => (
@@ -374,7 +373,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={model}
                 onChange={(e) => handleModelChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:border-[#22D3EE]"
               >
                 <option value="">Select Model</option>
                 {availableModels.map((mod) => (
@@ -398,7 +397,7 @@ export const FitmentFinder: React.FC<FitmentFinderProps> = ({
                 value={vehicleClass}
                 onChange={(e) => handleClassChange(e.target.value)}
                 style={selectStyle}
-                className="w-full h-8 rounded-md border px-2.5 text-xs focus:outline-none focus:border-[#22D3EE]"
+                className="w-full h-8 rounded-md border px-2.5 text-xs focus:border-[#22D3EE]"
               >
                 <option value="">Select Class</option>
                 {clientConfig.fitmentOptions.vehicleClasses.map((vc) => (
